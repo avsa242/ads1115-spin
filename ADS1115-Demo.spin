@@ -21,9 +21,11 @@ CON
     SER_TX      = 30
     SER_BAUD    = 115_200
 
-    I2C_SCL     = 12
-    I2C_SDA     = 13
+    I2C_SCL     = 14
+    I2C_SDA     = 15
     I2C_HZ      = 400_000
+    ADDR_BITS   = %00                                       ' Bits to set alternate slave addresses:
+'                                                               %00 (default), %01, %10, %11
 
 OBJ
 
@@ -82,7 +84,7 @@ PUB Setup
     time.MSleep(30)
     ser.Clear
     ser.Str(string("Serial terminal started", ser#CR, ser#LF))
-    if ads1115.Startx (I2C_SCL, I2C_SDA, I2C_HZ)
+    if ads1115.Startx (I2C_SCL, I2C_SDA, I2C_HZ, ADDR_BITS)
         ser.Str(string("ADS1115 driver started", ser#CR, ser#LF))
     else
         ser.Str(string("ADS1115 driver failed to start - halting", ser#CR, ser#LF))
