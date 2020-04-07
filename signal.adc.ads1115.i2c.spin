@@ -27,6 +27,7 @@ CON
 VAR
 
     long _range
+    long _last_adc
     byte _slave_bits
 
 OBJ
@@ -66,6 +67,11 @@ PUB Defaults
     Range(2_048)
     SampleRate(128)
 
+PUB LastVoltage
+' Return last ADC reading, in milli-volts
+    result := (_last_adc * 1_000) / 32767
+    result *= _range / 1_000
+
 PUB Measure | tmp
 ' Trigger a measurement, when in single-shot mode
     tmp := $0000
@@ -77,7 +83,7 @@ PUB OpMode(mode) | tmp
 ' Set operation mode
 '   Valid values:
 '       OPMODE_CONT (0): Continuous measurement mode
-'       OPMODE_SINGLE (1): Single-shot measurement mode
+'      *OPMODE_SINGLE (1): Single-shot measurement mode
 '   NOTE: The Ready method should be used to check measurement ready status
 '       when using Single-shot measurement mode.
 '       When using continuous measurement mode, using the Ready method will hang.
@@ -97,7 +103,7 @@ PUB OpMode(mode) | tmp
 PUB Range(mV) | tmp
 ' Set full-scale range of the ADC, in millivolts
 '   Valid values:
-'       256, 512, 1024, 2048, 4096, 6144
+'       256, 512, 1024, *2048, 4096, 6144
 '   Any other value polls the chip and returns the current setting
 '   NOTE: This merely affects the scaling of values returned in measurements. It doesn't
 '       affect the maximum allowable input range of the chip. Per the datasheet,
@@ -119,7 +125,7 @@ PUB Range(mV) | tmp
 
 PUB ReadADC(ch) | tmp
 ' Read measurement from channel ch
-'   Valid values: 0, 1, 2, 3
+'   Valid values: *0, 1, 2, 3
 '   Any other value is ignored
     tmp := $0000
     readReg(core#CONFIG, 2, @tmp)
@@ -135,6 +141,7 @@ PUB ReadADC(ch) | tmp
     writeReg(core#CONFIG, 2, @tmp)
     readReg(core#CONVERSION, 2, @result)
     ~~result                                                ' Extend sign of result
+    _last_adc := result
 
 PUB Ready
 ' Flag indicating measurement is complete

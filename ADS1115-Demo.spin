@@ -40,11 +40,11 @@ VAR
 
     byte _ser_cog
 
-PUB Main | range, raw, mV, opmode
+PUB Main | range, raw, mV, opmode, ch
 
     Setup
     ads1115.OpMode(ads1115#SINGLE)                          ' SINGLE or CONT
-    ads1115.Range(4_096)                                    ' Full scale range (mV): 256, 512, 1024, 2048, 4096, 6144
+    ads1115.Range(2_048)                                    ' Full scale range (mV): 256, 512, 1024, 2048, 4096, 6144
     ads1115.SampleRate(128)                                 ' Samples per sec: 8, 16, 32, 64, 128, 250, 475, 860
 
     ser.Position(0, 4)
@@ -62,21 +62,23 @@ PUB Main | range, raw, mV, opmode
     ser.str(string("sps", ser#CR, ser#LF))
 
     repeat
-        if opmode == ads1115#SINGLE
-            ads1115.Measure
-            repeat until ads1115.Ready                      ' NOTE: This would hang in continuous meas. mode
+        repeat ch from 0 to 3
+            if opmode == ads1115#SINGLE
+                ads1115.Measure
+                repeat until ads1115.Ready                  ' NOTE: This would hang in continuous meas. mode
 
-        raw := ads1115.ReadADC(1)
-        mv := ads1115.Voltage(1)
+            raw := ads1115.ReadADC(ch)
+            mv := ads1115.LastVoltage
 
-        ser.Position(0, 8)
-        ser.str(string("Raw ADC: "))
-        ser.str(int.hex(raw, 8))
-        ser.Newline
+            ser.Position(0, 8 + ch)
+            ser.str(string("Ch"))
+            ser.dec(ch)
+            ser.str(string(" raw ADC: "))
+            ser.str(int.hex(raw, 8))
 
-        ser.str(string("Voltage: "))
-        ser.str(int.decpadded(mV, 9))
-        ser.str(string("mV"))
+            ser.str(string("   Voltage: "))
+            ser.str(int.decpadded(mV, 9))
+            ser.str(string("mV"))
 
 PUB Setup
 
