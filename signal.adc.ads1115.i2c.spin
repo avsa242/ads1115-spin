@@ -27,31 +27,34 @@ CON
 VAR
 
     long _range
+    byte _slave_bits
 
 OBJ
 
-    i2c : "com.i2c"                                             'PASM I2C Driver
+    i2c : "com.i2c"                                                 'PASM I2C Driver
     core: "core.con.ads1115.spin"
-    time: "time"                                                'Basic timing functions
+    time: "time"                                                    'Basic timing functions
 
 PUB Null
 ''This is not a top-level object
 
-PUB Start: okay                                                 'Default to "standard" Propeller I2C pins and 400kHz
+PUB Start: okay                                                     'Default to "standard" Propeller I2C pins, default slave address, and 400kHz
 
-    okay := Startx (DEF_SCL, DEF_SDA, DEF_HZ)
+    okay := Startx (DEF_SCL, DEF_SDA, DEF_HZ, %00)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, SLAVE_BITS): okay
 
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
         if I2C_HZ =< core#I2C_MAX_FREQ
-            if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
-                time.MSleep (1)
-                if i2c.present (SLAVE_WR)                       'Response from device?
-                    Defaults
-                    return okay
+            if lookdown(SLAVE_BITS: %00, %01, %10, %11)
+                if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
+                    time.MSleep (1)
+                    _slave_bits := SLAVE_BITS << 1
+                    if i2c.present (SLAVE_WR | _slave_bits)         'Response from device?
+                        Defaults
+                        return okay
 
-    return FALSE                                                'If we got here, something went wrong
+    return FALSE                                                    'If we got here, something went wrong
 
 PUB Stop
 
@@ -170,13 +173,13 @@ PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
 ' Read nr_bytes from the slave device into the address stored in buff_addr
     case reg
         $00..$03:
-            cmd_packet.byte[0] := SLAVE_WR
+            cmd_packet.byte[0] := SLAVE_WR | _slave_bits
             cmd_packet.byte[1] := reg
             i2c.start
             i2c.wr_block (@cmd_packet, 2)
 
             i2c.start
-            i2c.write (SLAVE_RD)
+            i2c.write (SLAVE_RD | _slave_bits)
             repeat tmp from nr_bytes-1 to 0
                 byte[buff_addr][tmp] := i2c.read(tmp == 0)
             i2c.stop
@@ -187,7 +190,7 @@ PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
 ' Write nr_bytes to the slave device from the address stored in buff_addr
     case reg
         $01..$03:
-            cmd_packet.byte[0] := SLAVE_WR
+            cmd_packet.byte[0] := SLAVE_WR | _slave_bits
             cmd_packet.byte[1] := reg
             i2c.start
             i2c.wr_block (@cmd_packet, 2)

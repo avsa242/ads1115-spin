@@ -10,6 +10,7 @@ This is a P8X32A/Propeller driver object for the TI ADS1115 ADC
 * Measurement ready flag for single-shot mode
 * Set full-scale range and sampling rate
 * Read raw data or scaled to mV
+* Supports alternate slave addresses
 
 ## Requirements
 
