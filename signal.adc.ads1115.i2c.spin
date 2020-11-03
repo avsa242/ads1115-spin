@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Feb 8, 2020
+    Updated Nov 2, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -76,7 +76,7 @@ PUB Measure | tmp
 ' Trigger a measurement, when in single-shot mode
     tmp := $0000
     readReg(core#CONFIG, 2, @tmp)
-    tmp |= (1 << core#FLD_OS)
+    tmp |= (1 << core#OS)
     writeReg(core#CONFIG, 2, @tmp)
 
 PUB OpMode(mode) | tmp
@@ -91,12 +91,12 @@ PUB OpMode(mode) | tmp
     readReg(core#CONFIG, 2, @tmp)
     case mode
         CONT, SINGLE:
-            mode <<= core#FLD_MODE
+            mode <<= core#MODE
         OTHER:
-            tmp := (tmp >> core#FLD_MODE) & %1
+            tmp := (tmp >> core#MODE) & %1
             return tmp
 
-    tmp &= core#MASK_MODE
+    tmp &= core#MODE_MASK
     tmp := (tmp | mode) & core#CONFIG_MASK
     writeReg(core#CONFIG, 2, @tmp)
 
@@ -113,13 +113,13 @@ PUB Range(mV) | tmp
     case mV
         256, 512, 1_024, 2_048, 4_096, 6_144:
             _range := mV
-            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256) << core#FLD_PGA
+            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256) << core#PGA
         OTHER:
-            tmp := (tmp >> core#FLD_PGA) & core#BITS_PGA
+            tmp := (tmp >> core#PGA) & core#PGA_BITS
             result := lookupz(tmp: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
             return
 
-    tmp &= core#MASK_PGA
+    tmp &= core#PGA_MASK
     tmp := (tmp | mV) & core#CONFIG_MASK
     writeReg(core#CONFIG, 2, @tmp)
 
@@ -131,11 +131,11 @@ PUB ReadADC(ch) | tmp
     readReg(core#CONFIG, 2, @tmp)
     case ch
         0..3:
-            ch := (ch + %100) << core#FLD_MUX
+            ch := (ch + %100) << core#MUX
         OTHER:
             return FALSE
 
-    tmp &= core#MASK_MUX
+    tmp &= core#MUX_MASK
     tmp := (tmp | ch) & core#CONFIG_MASK
 
     writeReg(core#CONFIG, 2, @tmp)
@@ -148,7 +148,7 @@ PUB Ready
 '   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
     result := 0
     readreg(core#config, 2, @result)
-    result := ((result >> core#fld_os) & 1) * TRUE
+    result := ((result >> core#OS) & 1) * TRUE
 
 PUB SampleRate(sps) | tmp
 ' Set ADC sample rate, in samples per second
@@ -158,14 +158,14 @@ PUB SampleRate(sps) | tmp
     readReg(core#CONFIG, 2, @tmp)
     case sps
         8, 16, 32, 64, 128, 250, 475, 860:
-            sps := lookdownz(sps: 8, 16, 32, 64, 128, 250, 475, 860) << core#FLD_DR
+            sps := lookdownz(sps: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
         OTHER:
-            tmp := (tmp >> core#FLD_DR) & core#BITS_DR
+            tmp := (tmp >> core#DR) & core#DR_BITS
             result := lookupz(tmp: 8, 16, 32, 64, 128, 250, 475, 860)
             return result
 
-    tmp &= core#MASK_DR
-    tmp &= core#MASK_OS
+    tmp &= core#DR_MASK
+    tmp &= core#OS_MASK
     tmp := (tmp | sps) & core#CONFIG_MASK
 
     writeReg(core#CONFIG, 2, @tmp)

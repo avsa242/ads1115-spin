@@ -5,7 +5,7 @@
     Description: Demo of the ADS1115 driver
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Feb 8, 2020
+    Updated Nov 2, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -15,62 +15,56 @@ CON
     _clkmode = cfg#_clkmode
     _xinfreq = cfg#_xinfreq
 
+' -- User-definable constants
     LED         = cfg#LED1
-
-    SER_RX      = 31
-    SER_TX      = 30
     SER_BAUD    = 115_200
 
-    I2C_SCL     = 14
-    I2C_SDA     = 15
+    I2C_SCL     = 26
+    I2C_SDA     = 27
     I2C_HZ      = 400_000
-    ADDR_BITS   = %00                                       ' Bits to set alternate slave addresses:
-'                                                               %00 (default), %01, %10, %11
+    ADDR_BITS   = %00                           ' Alternate slave addresses:
+                                                ' %00 (default), %01, %10, %11
+' --
 
 OBJ
 
     cfg     : "core.con.boardcfg.parraldev"
     ser     : "com.serial.terminal.ansi"
     time    : "time"
-    io      : "io"
     int     : "string.integer"
     ads1115 : "signal.adc.ads1115.i2c"
 
-VAR
+PUB Main{} | range, raw, mV, opmode, ch
 
-    byte _ser_cog
+    setup{}
+    ads1115.opmode(ads1115#SINGLE)              ' SINGLE or CONT
+    ads1115.range(2_048)                        ' 256, 512, 1024, 2048, 4096, 6144 (mV)
+    ads1115.samplerate(128)                     ' 8, 16, 32, 64, 128, 250, 475, 860 (Hz)
 
-PUB Main | range, raw, mV, opmode, ch
-
-    Setup
-    ads1115.OpMode(ads1115#SINGLE)                          ' SINGLE or CONT
-    ads1115.Range(2_048)                                    ' Full scale range (mV): 256, 512, 1024, 2048, 4096, 6144
-    ads1115.SampleRate(128)                                 ' Samples per sec: 8, 16, 32, 64, 128, 250, 475, 860
-
-    ser.Position(0, 4)
+    ser.position(0, 4)
     ser.str(string("Operation mode: "))
-    ser.str(lookupz(opmode := ads1115.OpMode(-2): string("Continuous"), string("Single-shot")))
-    ser.Newline
+    ser.str(lookupz(opmode := ads1115.opmode(-2): string("Continuous"), string("Single-shot")))
+    ser.newline{}
 
     ser.str(string("Range: "))
-    ser.dec(range := ads1115.Range(-2))
+    ser.dec(range := ads1115.range(-2))
     ser.str(string("mV"))
-    ser.Newline
+    ser.newline{}
 
     ser.str(string("Sample rate: "))
-    ser.dec(ads1115.SampleRate(-2))
-    ser.str(string("sps", ser#CR, ser#LF))
+    ser.dec(ads1115.samplerate(-2))
+    ser.strln(string("sps"))
 
     repeat
         repeat ch from 0 to 3
             if opmode == ads1115#SINGLE
-                ads1115.Measure
-                repeat until ads1115.Ready                  ' NOTE: This would hang in continuous meas. mode
+                ads1115.measure{}
+                repeat until ads1115.ready{}    ' NOTE: This would hang in continuous meas. mode
 
-            raw := ads1115.ReadADC(ch)
-            mv := ads1115.LastVoltage
+            raw := ads1115.readadc(ch)
+            mv := ads1115.lastvoltage{}
 
-            ser.Position(0, 8 + ch)
+            ser.position(0, 8 + ch)
             ser.str(string("Ch"))
             ser.dec(ch)
             ser.str(string(" raw ADC: "))
@@ -80,22 +74,19 @@ PUB Main | range, raw, mV, opmode, ch
             ser.str(int.decpadded(mV, 9))
             ser.str(string("mV"))
 
-PUB Setup
+PUB Setup{}
 
-    repeat until _ser_cog := ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
-    time.MSleep(30)
-    ser.Clear
-    ser.Str(string("Serial terminal started", ser#CR, ser#LF))
-    if ads1115.Startx (I2C_SCL, I2C_SDA, I2C_HZ, ADDR_BITS)
-        ser.Str(string("ADS1115 driver started", ser#CR, ser#LF))
+    ser.start(SER_BAUD)
+    time.msleep(30)
+    ser.clear{}
+    ser.strln(string("Serial terminal started"))
+    if ads1115.startx(I2C_SCL, I2C_SDA, I2C_HZ, ADDR_BITS)
+        ser.strln(string("ADS1115 driver started"))
     else
-        ser.Str(string("ADS1115 driver failed to start - halting", ser#CR, ser#LF))
-        ads1115.Stop
-        time.MSleep(5)
-        ser.Stop
-        FlashLED(LED, 500)
-
-#include "lib.utility.spin"
+        ser.strln(string("ADS1115 driver failed to start - halting"))
+        ads1115.stop{}
+        time.msleep(5)
+        ser.stop{}
 
 DAT
 {

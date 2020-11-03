@@ -3,9 +3,9 @@
     Filename: core.con.ads1115.spin
     Author: Jesse Burt
     Description: Low-level constants
-    Copyright (c) 2019
+    Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Dec 30, 2019
+    Updated Nov 2, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -22,32 +22,34 @@ CON
 
     CONFIG              = $01
     CONFIG_MASK         = $FFFF
-        FLD_OS          = 15
-        FLD_MUX         = 12
-        FLD_PGA         = 9
-        FLD_MODE        = 8
-        FLD_DR          = 5
-        FLD_COMP_MODE   = 4
-        FLD_COMP_POL    = 3
-        FLD_COMP_LAT    = 2
-        FLD_COMP_QUE    = 0
-        BITS_MUX        = %111
-        BITS_PGA        = %111
-        BITS_DR         = %111
-        BITS_COMP_QUE   = %11
-        MASK_OS         = CONFIG_MASK ^ (1 << FLD_OS)
-        MASK_MUX        = CONFIG_MASK ^ (BITS_MUX << FLD_MUX)
-        MASK_PGA        = CONFIG_MASK ^ (BITS_PGA << FLD_PGA)
-        MASK_MODE       = CONFIG_MASK ^ (1 << FLD_MODE)
-        MASK_DR         = CONFIG_MASK ^ (BITS_DR << FLD_DR)
-        MASK_COMP_MODE  = CONFIG_MASK ^ (1 << FLD_COMP_MODE)
-        MASK_COMP_POL   = CONFIG_MASK ^ (1 << FLD_COMP_POL)
-        MASK_COMP_LAT   = CONFIG_MASK ^ (1 << FLD_COMP_LAT)
-        MASK_COMP_QUE   = CONFIG_MASK ^ (BITS_COMP_QUE << FLD_COMP_QUE)
+        OS              = 15
+        MUX             = 12
+        PGA             = 9
+        MODE            = 8
+        DR              = 5
+        COMP_MODE       = 4
+        COMP_POL        = 3
+        COMP_LAT        = 2
+        COMP_QUE        = 0
+        MUX_BITS        = %111
+        PGA_BITS        = %111
+        DR_BITS         = %111
+        COMP_QUE_BITS   = %11
+        OS_MASK         = (1 << OS) ^ CONFIG_MASK
+        MUX_MASK        = (MUX_BITS << MUX) ^ CONFIG_MASK
+        PGA_MASK        = (PGA_BITS << PGA) ^ CONFIG_MASK
+        MODE_MASK       = (1 << MODE) ^ CONFIG_MASK
+        DR_MASK         = (DR_BITS << DR) ^ CONFIG_MASK
+        COMP_MODE_MASK  = (1 << COMP_MODE) ^ CONFIG_MASK
+        COMP_POL_MASK   = (1 << COMP_POL) ^ CONFIG_MASK
+        COMP_LAT_MASK   = (1 << COMP_LAT) ^ CONFIG_MASK
+        COMP_QUE_MASK   = COMP_QUE_BITS ^ CONFIG_MASK
 
     LO_THRESH           = $02
 
     HI_THRESH           = $03
 
-PUB Null
-'' This is not a top-level object
+#ifndef __propeller2__
+PUB Null{}
+' This is not a top-level object
+#endif
