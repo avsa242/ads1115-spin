@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Nov 2, 2020
+    Updated Nov 3, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -17,7 +17,7 @@ CON
 
     DEF_SCL             = 28
     DEF_SDA             = 29
-    DEF_HZ              = 400_000
+    DEF_HZ              = 100_000
     I2C_MAX_FREQ        = core#I2C_MAX_FREQ
 
 ' Operation modes
@@ -28,58 +28,57 @@ VAR
 
     long _range
     long _last_adc
-    byte _slave_bits
+    byte _addr_bits
 
 OBJ
 
-    i2c : "com.i2c"                                                 'PASM I2C Driver
+    i2c : "com.i2c"                             ' PASM I2C Driver
     core: "core.con.ads1115.spin"
-    time: "time"                                                    'Basic timing functions
+    time: "time"                                ' Basic timing functions
 
-PUB Null
-''This is not a top-level object
+PUB Null{}
+' This is not a top-level object
 
-PUB Start: okay                                                     'Default to "standard" Propeller I2C pins, default slave address, and 400kHz
+PUB Start{}: okay
+' Start with "standard" Propeller I2C pins, default slave address, and 100kHz
+    okay := startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
 
-    okay := Startx (DEF_SCL, DEF_SDA, DEF_HZ, %00)
-
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, SLAVE_BITS): okay
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): okay
 
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
         if I2C_HZ =< core#I2C_MAX_FREQ
-            if lookdown(SLAVE_BITS: %00, %01, %10, %11)
-                if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
-                    time.MSleep (1)
-                    _slave_bits := SLAVE_BITS << 1
-                    if i2c.present (SLAVE_WR | _slave_bits)         'Response from device?
-                        Defaults
+            if lookdown(ADDR_BITS: %00, %01, %10, %11)
+                if okay := i2c.setupx(SCL_PIN, SDA_PIN, I2C_HZ)
+                    time.msleep(1)
+                    _addr_bits := ADDR_BITS << 1
+                    if i2c.present(SLAVE_WR | _addr_bits)
+                        defaults{}
                         return okay
 
-    return FALSE                                                    'If we got here, something went wrong
+    return FALSE                                ' Something above went wrong
 
-PUB Stop
+PUB Stop{}
 
-    i2c.terminate
+    i2c.terminate{}
 
-PUB Defaults
+PUB Defaults{}
+' Set factory defaults
+    opmode(SINGLE)
+    range(2_048)
+    samplerate(128)
 
-    OpMode(SINGLE)
-    Range(2_048)
-    SampleRate(128)
-
-PUB LastVoltage
+PUB LastVoltage{}: mV
 ' Return last ADC reading, in milli-volts
-    result := (_last_adc * 1_000) / 32767
-    result *= _range / 1_000
+    return ((_last_adc * 1_000) / 32767) * (_range / 1_000)
 
-PUB Measure | tmp
+PUB Measure{} | tmp
 ' Trigger a measurement, when in single-shot mode
-    tmp := $0000
-    readReg(core#CONFIG, 2, @tmp)
+    tmp := 0
+    readreg(core#CONFIG, 2, @tmp)
     tmp |= (1 << core#OS)
-    writeReg(core#CONFIG, 2, @tmp)
+    writereg(core#CONFIG, 2, @tmp)
 
-PUB OpMode(mode) | tmp
+PUB OpMode(mode): curr_mode
 ' Set operation mode
 '   Valid values:
 '       OPMODE_CONT (0): Continuous measurement mode
@@ -87,20 +86,19 @@ PUB OpMode(mode) | tmp
 '   NOTE: The Ready method should be used to check measurement ready status
 '       when using Single-shot measurement mode.
 '       When using continuous measurement mode, using the Ready method will hang.
-    tmp := $0000
-    readReg(core#CONFIG, 2, @tmp)
+    curr_mode := 0
+    readreg(core#CONFIG, 2, @curr_mode)
     case mode
         CONT, SINGLE:
             mode <<= core#MODE
-        OTHER:
-            tmp := (tmp >> core#MODE) & %1
-            return tmp
+        other:
+            return (curr_mode >> core#MODE) & %1
 
-    tmp &= core#MODE_MASK
-    tmp := (tmp | mode) & core#CONFIG_MASK
-    writeReg(core#CONFIG, 2, @tmp)
+    curr_mode &= core#MODE_MASK
+    curr_mode := (curr_mode | mode) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @curr_mode)
 
-PUB Range(mV) | tmp
+PUB Range(mV): curr_rng
 ' Set full-scale range of the ADC, in millivolts
 '   Valid values:
 '       256, 512, 1024, *2048, 4096, 6144
@@ -108,106 +106,101 @@ PUB Range(mV) | tmp
 '   NOTE: This merely affects the scaling of values returned in measurements. It doesn't
 '       affect the maximum allowable input range of the chip. Per the datasheet,
 '       do NOT exceed VDD + 0.3V on the inputs.
-    tmp := $0000
-    readReg(core#CONFIG, 2, @tmp)
+    curr_rng := 0
+    readreg(core#CONFIG, 2, @curr_rng)
     case mV
         256, 512, 1_024, 2_048, 4_096, 6_144:
             _range := mV
             mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256) << core#PGA
-        OTHER:
-            tmp := (tmp >> core#PGA) & core#PGA_BITS
-            result := lookupz(tmp: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
-            return
+        other:
+            curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
+            return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
 
-    tmp &= core#PGA_MASK
-    tmp := (tmp | mV) & core#CONFIG_MASK
-    writeReg(core#CONFIG, 2, @tmp)
+    curr_rng &= core#PGA_MASK
+    curr_rng := (curr_rng | mV) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @curr_rng)
 
-PUB ReadADC(ch) | tmp
+PUB ReadADC(ch): adc_word | tmp
 ' Read measurement from channel ch
 '   Valid values: *0, 1, 2, 3
 '   Any other value is ignored
-    tmp := $0000
-    readReg(core#CONFIG, 2, @tmp)
+    tmp := 0
+    readreg(core#CONFIG, 2, @tmp)
     case ch
         0..3:
             ch := (ch + %100) << core#MUX
-        OTHER:
+        other:
             return FALSE
 
     tmp &= core#MUX_MASK
     tmp := (tmp | ch) & core#CONFIG_MASK
 
-    writeReg(core#CONFIG, 2, @tmp)
-    readReg(core#CONVERSION, 2, @result)
-    ~~result                                                ' Extend sign of result
-    _last_adc := result
+    writereg(core#CONFIG, 2, @tmp)
+    readreg(core#CONVERSION, 2, @adc_word)
+    ~~adc_word                                  ' Extend sign of result
+    _last_adc := adc_word
 
-PUB Ready
+PUB Ready{}: flag 'XXX rename to ADCDataReady()
 ' Flag indicating measurement is complete
 '   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
-    result := 0
-    readreg(core#config, 2, @result)
-    result := ((result >> core#OS) & 1) * TRUE
+    flag := 0
+    readreg(core#config, 2, @flag)
+    return ((result >> core#OS) & 1) * TRUE
 
-PUB SampleRate(sps) | tmp
+PUB SampleRate(sps): curr_rate
 ' Set ADC sample rate, in samples per second
 '   Valid values: 8, 16, 32, 64, *128, 250, 475, 860
 '   Any other value polls the chip and returns the current setting
-    tmp := $0000
-    readReg(core#CONFIG, 2, @tmp)
+    curr_rate := 0
+    readreg(core#CONFIG, 2, @curr_rate)
     case sps
         8, 16, 32, 64, 128, 250, 475, 860:
             sps := lookdownz(sps: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
-        OTHER:
-            tmp := (tmp >> core#DR) & core#DR_BITS
-            result := lookupz(tmp: 8, 16, 32, 64, 128, 250, 475, 860)
-            return result
+        other:
+            curr_rate := (curr_rate >> core#DR) & core#DR_BITS
+            return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
 
-    tmp &= core#DR_MASK
-    tmp &= core#OS_MASK
-    tmp := (tmp | sps) & core#CONFIG_MASK
+    curr_rate &= core#DR_MASK
+    curr_rate &= core#OS_MASK
+    curr_rate := (curr_rate | sps) & core#CONFIG_MASK
 
-    writeReg(core#CONFIG, 2, @tmp)
-    return tmp
+    writereg(core#CONFIG, 2, @curr_rate)
 
-PUB Voltage(ch)
+PUB Voltage(ch): mV
 ' Return ADC reading, in milli-volts
-    result := (ReadADC(ch) * 1_000) / 32767
-    result *= _range / 1_000
+    return ((readadc(ch) * 1_000) / 32767) * (_range / 1_000)
 
-PRI readReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
-' Read nr_bytes from the slave device into the address stored in buff_addr
-    case reg
+PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
+' Read nr_bytes from reg_nr into ptr_buff
+    case reg_nr
         $00..$03:
-            cmd_packet.byte[0] := SLAVE_WR | _slave_bits
-            cmd_packet.byte[1] := reg
+            cmd_pkt.byte[0] := SLAVE_WR | _addr_bits
+            cmd_pkt.byte[1] := reg_nr
             i2c.start
-            i2c.wr_block (@cmd_packet, 2)
+            i2c.wr_block (@cmd_pkt, 2)
 
             i2c.start
-            i2c.write (SLAVE_RD | _slave_bits)
+            i2c.write (SLAVE_RD | _addr_bits)
             repeat tmp from nr_bytes-1 to 0
-                byte[buff_addr][tmp] := i2c.read(tmp == 0)
+                byte[ptr_buff][tmp] := i2c.read(tmp == 0)
             i2c.stop
-        OTHER:
+        other:
             return
 
-PRI writeReg(reg, nr_bytes, buff_addr) | cmd_packet, tmp
-' Write nr_bytes to the slave device from the address stored in buff_addr
-    case reg
+PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
+' Write nr_bytes from ptr_buff to the slave device
+    case reg_nr
         $01..$03:
-            cmd_packet.byte[0] := SLAVE_WR | _slave_bits
-            cmd_packet.byte[1] := reg
+            cmd_pkt.byte[0] := SLAVE_WR | _addr_bits
+            cmd_pkt.byte[1] := reg_nr
             i2c.start
-            i2c.wr_block (@cmd_packet, 2)
+            i2c.wr_block (@cmd_pkt, 2)
 
             repeat tmp from nr_bytes-1 to 0
-                i2c.write (byte[buff_addr][tmp])
+                i2c.write (byte[ptr_buff][tmp])
             i2c.stop
-        OTHER:
+        other:
             return
-
 
 DAT
 {
