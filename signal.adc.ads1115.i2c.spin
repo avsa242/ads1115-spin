@@ -83,9 +83,6 @@ PUB OpMode(mode): curr_mode
 '   Valid values:
 '       OPMODE_CONT (0): Continuous measurement mode
 '      *OPMODE_SINGLE (1): Single-shot measurement mode
-'   NOTE: The Ready method should be used to check measurement ready status
-'       when using Single-shot measurement mode.
-'       When using continuous measurement mode, using the Ready method will hang.
     curr_mode := 0
     readreg(core#CONFIG, 2, @curr_mode)
     case mode
@@ -94,9 +91,8 @@ PUB OpMode(mode): curr_mode
         other:
             return (curr_mode >> core#MODE) & %1
 
-    curr_mode &= core#MODE_MASK
-    curr_mode := (curr_mode | mode) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_mode)
+    mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @mode)
 
 PUB Range(mV): curr_rng
 ' Set full-scale range of the ADC, in millivolts
