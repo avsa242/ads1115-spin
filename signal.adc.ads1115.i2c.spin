@@ -112,8 +112,7 @@ PUB Range(mV): curr_rng
             curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
             return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
 
-    curr_rng &= core#PGA_MASK
-    curr_rng := (curr_rng | mV) & core#CONFIG_MASK
+    mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @curr_rng)
 
 PUB ReadADC(ch): adc_word | tmp
