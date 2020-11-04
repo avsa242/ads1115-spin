@@ -67,6 +67,26 @@ PUB Defaults{}
     range(2_048)
     samplerate(128)
 
+PUB ADCData(ch): adc_word | tmp
+' Read measurement from channel ch
+'   Valid values: *0, 1, 2, 3
+'   Any other value is ignored
+    tmp := 0
+    readreg(core#CONFIG, 2, @tmp)
+    case ch
+        0..3:
+            ch := (ch + %100) << core#MUX
+        other:
+            return FALSE
+
+    tmp &= core#MUX_MASK
+    tmp := (tmp | ch) & core#CONFIG_MASK
+
+    writereg(core#CONFIG, 2, @tmp)
+    readreg(core#CONVERSION, 2, @adc_word)
+    ~~adc_word                                  ' Extend sign of result
+    _last_adc := adc_word
+
 PUB ADCDataRate(rate): curr_rate
 ' Set ADC sample rate, in Hz
 '   Valid values: 8, 16, 32, 64, *128, 250, 475, 860
@@ -82,6 +102,34 @@ PUB ADCDataRate(rate): curr_rate
 
     rate := ((curr_rate & core#DR_MASK & core#OS_MASK) | rate) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @rate)
+
+PUB ADCDataReady{}: flag
+' Flag indicating measurement is complete
+'   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
+    flag := 0
+    readreg(core#config, 2, @flag)
+    return ((flag >> core#OS) & 1) == 1
+
+PUB ADCScale(mV): curr_rng
+' Set full-scale range of the ADC, in millivolts
+'   Valid values:
+'       256, 512, 1024, *2048, 4096, 6144
+'   Any other value polls the chip and returns the current setting
+'   NOTE: This merely affects the scaling of values returned in measurements. It doesn't
+'       affect the maximum allowable input range of the chip. Per the datasheet,
+'       do NOT exceed VDD + 0.3V on the inputs.
+    curr_rng := 0
+    readreg(core#CONFIG, 2, @curr_rng)
+    case mV
+        256, 512, 1_024, 2_048, 4_096, 6_144:
+            _range := mV
+            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256) << core#PGA
+        other:
+            curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
+            return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
+
+    mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @curr_rng)
 
 PUB LastVoltage{}: mV
 ' Return last ADC reading, in milli-volts
@@ -109,54 +157,6 @@ PUB OpMode(mode): curr_mode
 
     mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @mode)
-
-PUB Range(mV): curr_rng 'XXX rename to ADCScale()
-' Set full-scale range of the ADC, in millivolts
-'   Valid values:
-'       256, 512, 1024, *2048, 4096, 6144
-'   Any other value polls the chip and returns the current setting
-'   NOTE: This merely affects the scaling of values returned in measurements. It doesn't
-'       affect the maximum allowable input range of the chip. Per the datasheet,
-'       do NOT exceed VDD + 0.3V on the inputs.
-    curr_rng := 0
-    readreg(core#CONFIG, 2, @curr_rng)
-    case mV
-        256, 512, 1_024, 2_048, 4_096, 6_144:
-            _range := mV
-            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256) << core#PGA
-        other:
-            curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
-            return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
-
-    mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_rng)
-
-PUB ReadADC(ch): adc_word | tmp 'XXX rename to ADCData(), copy to pointers?
-' Read measurement from channel ch
-'   Valid values: *0, 1, 2, 3
-'   Any other value is ignored
-    tmp := 0
-    readreg(core#CONFIG, 2, @tmp)
-    case ch
-        0..3:
-            ch := (ch + %100) << core#MUX
-        other:
-            return FALSE
-
-    tmp &= core#MUX_MASK
-    tmp := (tmp | ch) & core#CONFIG_MASK
-
-    writereg(core#CONFIG, 2, @tmp)
-    readreg(core#CONVERSION, 2, @adc_word)
-    ~~adc_word                                  ' Extend sign of result
-    _last_adc := adc_word
-
-PUB Ready{}: flag 'XXX rename to ADCDataReady()
-' Flag indicating measurement is complete
-'   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
-    flag := 0
-    readreg(core#config, 2, @flag)
-    return ((flag >> core#OS) & 1) == 1
 
 PUB Voltage(ch): mV
 ' Return ADC reading, in milli-volts
