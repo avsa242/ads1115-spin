@@ -140,7 +140,7 @@ PUB Ready{}: flag 'XXX rename to ADCDataReady()
 '   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
     flag := 0
     readreg(core#config, 2, @flag)
-    return ((result >> core#OS) & 1) * TRUE
+    return ((flag >> core#OS) & 1) == 1
 
 PUB SampleRate(sps): curr_rate
 ' Set ADC sample rate, in samples per second
