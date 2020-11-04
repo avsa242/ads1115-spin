@@ -155,11 +155,8 @@ PUB SampleRate(sps): curr_rate
             curr_rate := (curr_rate >> core#DR) & core#DR_BITS
             return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
 
-    curr_rate &= core#DR_MASK
-    curr_rate &= core#OS_MASK
-    curr_rate := (curr_rate | sps) & core#CONFIG_MASK
-
-    writereg(core#CONFIG, 2, @curr_rate)
+    sps := ((curr_rate & core#DR_MASK & core#OS_MASK) | sps) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @sps)
 
 PUB Voltage(ch): mV
 ' Return ADC reading, in milli-volts
