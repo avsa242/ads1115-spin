@@ -1,5 +1,5 @@
 {
-    --------------------------------------------
+    -------------------------------------------
     Filename: core.con.ads1115.spin
     Author: Jesse Burt
     Description: Low-level constants

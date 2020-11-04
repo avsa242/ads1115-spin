@@ -67,6 +67,22 @@ PUB Defaults{}
     range(2_048)
     samplerate(128)
 
+PUB ADCDataRate(rate): curr_rate
+' Set ADC sample rate, in Hz
+'   Valid values: 8, 16, 32, 64, *128, 250, 475, 860
+'   Any other value polls the chip and returns the current setting
+    curr_rate := 0
+    readreg(core#CONFIG, 2, @curr_rate)
+    case rate
+        8, 16, 32, 64, 128, 250, 475, 860:
+            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
+        other:
+            curr_rate := (curr_rate >> core#DR) & core#DR_BITS
+            return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
+
+    rate := ((curr_rate & core#DR_MASK & core#OS_MASK) | rate) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @rate)
+
 PUB LastVoltage{}: mV
 ' Return last ADC reading, in milli-volts
     return ((_last_adc * 1_000) / 32767) * (_range / 1_000)
@@ -94,7 +110,7 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @mode)
 
-PUB Range(mV): curr_rng
+PUB Range(mV): curr_rng 'XXX rename to ADCScale()
 ' Set full-scale range of the ADC, in millivolts
 '   Valid values:
 '       256, 512, 1024, *2048, 4096, 6144
@@ -115,7 +131,7 @@ PUB Range(mV): curr_rng
     mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @curr_rng)
 
-PUB ReadADC(ch): adc_word | tmp
+PUB ReadADC(ch): adc_word | tmp 'XXX rename to ADCData(), copy to pointers?
 ' Read measurement from channel ch
 '   Valid values: *0, 1, 2, 3
 '   Any other value is ignored
@@ -141,22 +157,6 @@ PUB Ready{}: flag 'XXX rename to ADCDataReady()
     flag := 0
     readreg(core#config, 2, @flag)
     return ((flag >> core#OS) & 1) == 1
-
-PUB SampleRate(sps): curr_rate
-' Set ADC sample rate, in samples per second
-'   Valid values: 8, 16, 32, 64, *128, 250, 475, 860
-'   Any other value polls the chip and returns the current setting
-    curr_rate := 0
-    readreg(core#CONFIG, 2, @curr_rate)
-    case sps
-        8, 16, 32, 64, 128, 250, 475, 860:
-            sps := lookdownz(sps: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
-        other:
-            curr_rate := (curr_rate >> core#DR) & core#DR_BITS
-            return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
-
-    sps := ((curr_rate & core#DR_MASK & core#OS_MASK) | sps) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @sps)
 
 PUB Voltage(ch): mV
 ' Return ADC reading, in milli-volts
