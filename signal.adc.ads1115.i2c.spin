@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Nov 3, 2020
+    Updated Nov 5, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -26,7 +26,7 @@ CON
 
 VAR
 
-    long _range
+    long _uvolts_lsb
     long _last_adc
     byte _addr_bits
 
@@ -35,6 +35,7 @@ OBJ
     i2c : "com.i2c"                             ' PASM I2C Driver
     core: "core.con.ads1115.spin"
     time: "time"                                ' Basic timing functions
+    u64 : "math.unsigned64"
 
 PUB Null{}
 ' This is not a top-level object
@@ -64,8 +65,8 @@ PUB Stop{}
 PUB Defaults{}
 ' Set factory defaults
     opmode(SINGLE)
-    range(2_048)
-    samplerate(128)
+    adcscale(2_048)
+    adcdatarate(128)
 
 PUB ADCData(ch): adc_word | tmp
 ' Read measurement from channel ch
@@ -122,18 +123,20 @@ PUB ADCScale(mV): curr_rng
     readreg(core#CONFIG, 2, @curr_rng)
     case mV
         256, 512, 1_024, 2_048, 4_096, 6_144:
-            _range := mV
-            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256) << core#PGA
+            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256)
+            ' set scaling factor
+            _uvolts_lsb := lookupz(mV: 187_5000, 125_0000, 62_5000, 31_2500, 15_6250, 7_8125)
+            mV <<= core#PGA
         other:
             curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
             return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
 
     mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @curr_rng)
+    writereg(core#CONFIG, 2, @mV)
 
-PUB LastVoltage{}: mV
-' Return last ADC reading, in milli-volts
-    return ((_last_adc * 1_000) / 32767) * (_range / 1_000)
+PUB LastVoltage{}: uV
+' Return last ADC reading, in microvolts
+    return wordtovolts(_last_adc)
 
 PUB Measure{} | tmp
 ' Trigger a measurement, when in single-shot mode
@@ -158,9 +161,13 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @mode)
 
-PUB Voltage(ch): mV
+PUB Voltage(ch): uV
 ' Return ADC reading, in milli-volts
-    return ((readadc(ch) * 1_000) / 32767) * (_range / 1_000)
+    return wordtovolts(adcdata(ch))
+
+PRI wordToVolts(adc_word): uV
+' Scale ADC word to microvolts
+    return u64.multdiv(adc_word, _uvolts_lsb, 1_0000)
 
 PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
 ' Read nr_bytes from reg_nr into ptr_buff

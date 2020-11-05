@@ -5,7 +5,7 @@
     Description: Demo of the ADS1115 driver
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Nov 2, 2020
+    Updated Nov 5, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -34,35 +34,35 @@ OBJ
     int     : "string.integer"
     ads1115 : "signal.adc.ads1115.i2c"
 
-PUB Main{} | range, raw, mV, opmode, ch
+PUB Main{} | scale, raw, uV, opmode, ch
 
     setup{}
     ads1115.opmode(ads1115#SINGLE)              ' SINGLE or CONT
-    ads1115.range(2_048)                        ' 256, 512, 1024, 2048, 4096, 6144 (mV)
-    ads1115.samplerate(128)                     ' 8, 16, 32, 64, 128, 250, 475, 860 (Hz)
+    ads1115.adcscale(4_096)                     ' 256, 512, 1024, 2048, 4096, 6144 (mV)
+    ads1115.adcdatarate(128)                    ' 8, 16, 32, 64, 128, 250, 475, 860 (Hz)
 
     ser.position(0, 4)
-    ser.str(string("Operation mode: "))
+    ser.str(string("OpMode: "))
     ser.str(lookupz(opmode := ads1115.opmode(-2): string("Continuous"), string("Single-shot")))
     ser.newline{}
 
-    ser.str(string("Range: "))
-    ser.dec(range := ads1115.range(-2))
+    ser.str(string("ADCScale: "))
+    ser.dec(scale := ads1115.adcscale(-2))
     ser.str(string("mV"))
     ser.newline{}
 
-    ser.str(string("Sample rate: "))
-    ser.dec(ads1115.samplerate(-2))
-    ser.strln(string("sps"))
+    ser.str(string("ADCDataRate: "))
+    ser.dec(ads1115.adcdatarate(-2))
+    ser.strln(string("Hz"))
 
     repeat
         repeat ch from 0 to 3
             if opmode == ads1115#SINGLE
                 ads1115.measure{}
-                repeat until ads1115.ready{}    ' NOTE: This would hang in continuous meas. mode
+                repeat until ads1115.adcdataready{}
 
-            raw := ads1115.readadc(ch)
-            mv := ads1115.lastvoltage{}
+            raw := ads1115.adcdata(ch)
+            uV := ads1115.lastvoltage{}
 
             ser.position(0, 8 + ch)
             ser.str(string("Ch"))
@@ -71,8 +71,8 @@ PUB Main{} | range, raw, mV, opmode, ch
             ser.str(int.hex(raw, 8))
 
             ser.str(string("   Voltage: "))
-            ser.str(int.decpadded(mV, 9))
-            ser.str(string("mV"))
+            ser.str(int.decpadded(uV, 9))
+            ser.str(string("uV"))
 
 PUB Setup{}
 
