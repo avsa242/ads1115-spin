@@ -148,8 +148,8 @@ PUB Measure{} | tmp
 PUB OpMode(mode): curr_mode
 ' Set operation mode
 '   Valid values:
-'       OPMODE_CONT (0): Continuous measurement mode
-'      *OPMODE_SINGLE (1): Single-shot measurement mode
+'       CONT (0): Continuous measurement mode
+'      *SINGLE (1): Single-shot measurement mode
     curr_mode := 0
     readreg(core#CONFIG, 2, @curr_mode)
     case mode
