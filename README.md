@@ -3,7 +3,7 @@
 
 This is a P8X32A/Propeller driver object for the TI ADS1115 ADC
 
-**IMPORTANT**: This software is meant to be used with the [spin-standard-library](https://github.com/avsa242/spin-standard-library) (P8X32A) or [p2-spin-standard-library](https://github.com/avsa242/p2-spin-standard-library) (P2X8C4M64P). Please install the applicable library first before attempting to use this code, otherwise you will be missing several files required to build the project.
+**IMPORTANT**: This software is meant to be used with the [spin-standard-library](https://github.com/avsa242/spin-standard-library) (P8X32A) or ~~[p2-spin-standard-library](https://github.com/avsa242/p2-spin-standard-library) (P2X8C4M64P)~~. Please install the applicable library first before attempting to use this code, otherwise you will be missing several files required to build the project.
 
 ## Salient Features
 
@@ -18,15 +18,15 @@ This is a P8X32A/Propeller driver object for the TI ADS1115 ADC
 
 P1/SPIN1:
 * spin-standard-library
-* 1 extra core/cog for the PASM SPI driver
+* 1 extra core/cog for the PASM I2C driver
 
-P2/SPIN2:
-* p2-spin-standard-library
+~~P2/SPIN2:~~
+~~* p2-spin-standard-library~~
 
 ## Compiler Compatibility
 
 * P1/SPIN1: OpenSpin (tested with 1.00.81)
-* P2/SPIN2: FastSpin (tested with 4.1.10-beta)
+* ~~P2/SPIN2: FastSpin~~ _(not implemented yet)_
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
 * ~~PNut~~ (incompatible - no preprocessor)
@@ -39,5 +39,8 @@ P2/SPIN2:
 
 ## TODO
 
+- [ ] Port to SPIN2
 - [ ] Add support for under/over-voltage detection
+- [ ] Add interrupt support
+- [ ] Add differential input support
 - [ ] Add support for 3.4MHz HS I2C mode

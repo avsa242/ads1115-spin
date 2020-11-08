@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Nov 2, 2020
+    Updated Nov 7, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -53,3 +53,4 @@ CON
 PUB Null{}
 ' This is not a top-level object
 #endif
+

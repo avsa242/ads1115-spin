@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2020
     Started Dec 29, 2019
-    Updated Nov 5, 2020
+    Updated Nov 8, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -68,22 +68,25 @@ PUB Defaults{}
     adcscale(2_048)
     adcdatarate(128)
 
-PUB ADCData(ch): adc_word | tmp
-' Read measurement from channel ch
-'   Valid values: *0, 1, 2, 3
-'   Any other value is ignored
-    tmp := 0
-    readreg(core#CONFIG, 2, @tmp)
+PUB ADCChannelEnabled(ch): curr_ch
+' Set active ADC channel
+'   Valid values: 0..3
+'   Any other value polls the chip and returns the current setting
+    curr_ch := 0
+    readreg(core#CONFIG, 2, @curr_ch)
     case ch
         0..3:
             ch := (ch + %100) << core#MUX
         other:
-            return FALSE
+            return ((ch >> core#MUX) & %111) - %100
 
-    tmp &= core#MUX_MASK
-    tmp := (tmp | ch) & core#CONFIG_MASK
+    ch := ((curr_ch & core#MUX_MASK) | ch) & core#CONFIG_MASK
+    writereg(core#CONFIG, 2, @ch)
 
-    writereg(core#CONFIG, 2, @tmp)
+PUB ADCData{}: adc_word | tmp
+' Read measurement from channel ch
+'   Valid values: *0, 1, 2, 3
+'   Any other value is ignored
     readreg(core#CONVERSION, 2, @adc_word)
     ~~adc_word                                  ' Extend sign of result
     _last_adc := adc_word
@@ -108,7 +111,7 @@ PUB ADCDataReady{}: flag
 ' Flag indicating measurement is complete
 '   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
     flag := 0
-    readreg(core#config, 2, @flag)
+    readreg(core#CONFIG, 2, @flag)
     return ((flag >> core#OS) & 1) == 1
 
 PUB ADCScale(mV): curr_rng
@@ -163,7 +166,7 @@ PUB OpMode(mode): curr_mode
 
 PUB Voltage(ch): uV
 ' Return ADC reading, in milli-volts
-    return wordtovolts(adcdata(ch))
+    return wordtovolts(adcdata{})
 
 PRI wordToVolts(adc_word): uV
 ' Scale ADC word to microvolts
