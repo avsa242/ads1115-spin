@@ -1,10 +1,10 @@
 {
     --------------------------------------------
-    Filename: signal.adc.ads1115.i2c.spin
+    Filename: signal.adc.ads1115.i2c.spin2
     Author: Jesse Burt
-    Description: Driver for the TI ADS1115 ADC
+    Description: Driver for the TI ADS1115 ADC (P2 version)
     Copyright (c) 2021
-    Started Dec 29, 2019
+    Started Apr 2, 2021
     Updated Apr 2, 2021
     See end of file for terms of use.
     --------------------------------------------
@@ -12,13 +12,11 @@
 
 CON
 
-    SLAVE_WR            = core#SLAVE_ADDR
-    SLAVE_RD            = core#SLAVE_ADDR|1
+    SLAVE_WR            = core.SLAVE_ADDR
+    SLAVE_RD            = core.SLAVE_ADDR|1
 
-    DEF_SCL             = 28
-    DEF_SDA             = 29
     DEF_HZ              = 100_000
-    I2C_MAX_FREQ        = core#I2C_MAX_FREQ
+    I2C_MAX_FREQ        = core.I2C_MAX_FREQ
 
 ' Operation modes
     CONT                = 0
@@ -32,39 +30,34 @@ VAR
 
 OBJ
 
-    i2c : "com.i2c"                             ' PASM I2C engine
+    i2c : "com.i2c"                             ' I2C engine
     core: "core.con.ads1115"                    ' HW-specific constants
-    time: "time"                                ' Basic timing functions
     u64 : "math.unsigned64"                     ' unsigned 64-bit int math
 
-PUB Null{}
+PUB Null()
 ' This is not a top-level object
 
-PUB Start{}: status
-' Start with "standard" Propeller I2C pins, default slave address, and 100kHz
-    return startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
-
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ=DEF_HZ, ADDR_BITS=0): status
 ' Start using custom I/O settings and bus speed
-    if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
-}   I2C_HZ =< core#I2C_MAX_FREQ
+    if lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63) and {
+}   I2C_HZ <= core.I2C_MAX_FREQ
         if lookdown(ADDR_BITS: %00, %01, %10, %11)
             if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
-                time.msleep(1)
+                waitms(1)
                 _addr_bits := ADDR_BITS << 1
                 if i2c.present(SLAVE_WR | _addr_bits)
-                    defaults{}
+                    defaults()
                     return
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
 
-PUB Stop{}
+PUB Stop()
 
-    i2c.deinit{}
+    i2c.deinit()
 
-PUB Defaults{}
+PUB Defaults()
 ' Set factory defaults
     opmode(SINGLE)
     adcscale(2_048)
@@ -75,21 +68,21 @@ PUB ADCChannelEnabled(ch): curr_ch
 '   Valid values: 0..3
 '   Any other value polls the chip and returns the current setting
     curr_ch := 0
-    readreg(core#CONFIG, 2, @curr_ch)
+    readreg(core.CONFIG, 2, @curr_ch)
     case ch
         0..3:
-            ch := (ch + %100) << core#MUX
+            ch := (ch + %100) << core.MUX
         other:
-            return ((ch >> core#MUX) & %111) - %100
+            return ((ch >> core.MUX) & %111) - %100
 
-    ch := ((curr_ch & core#MUX_MASK) | ch) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @ch)
+    ch := ((curr_ch & core.MUX_MASK) | ch) & core.CONFIG_MASK
+    writereg(core.CONFIG, 2, @ch)
 
-PUB ADCData{}: adc_word | tmp
+PUB ADCData(): adc_word | tmp
 ' Read measurement from channel ch
 '   Valid values: *0, 1, 2, 3
 '   Any other value is ignored
-    readreg(core#CONVERSION, 2, @adc_word)
+    readreg(core.CONVERSION, 2, @adc_word)
     ~~adc_word                                  ' Extend sign of result
     _last_adc := adc_word
 
@@ -98,23 +91,23 @@ PUB ADCDataRate(rate): curr_rate
 '   Valid values: 8, 16, 32, 64, *128, 250, 475, 860
 '   Any other value polls the chip and returns the current setting
     curr_rate := 0
-    readreg(core#CONFIG, 2, @curr_rate)
+    readreg(core.CONFIG, 2, @curr_rate)
     case rate
         8, 16, 32, 64, 128, 250, 475, 860:
-            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
+            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) << core.DR
         other:
-            curr_rate := (curr_rate >> core#DR) & core#DR_BITS
+            curr_rate := (curr_rate >> core.DR) & core.DR_BITS
             return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
 
-    rate := ((curr_rate & core#DR_MASK & core#OS_MASK) | rate) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @rate)
+    rate := ((curr_rate & core.DR_MASK & core.OS_MASK) | rate) & core.CONFIG_MASK
+    writereg(core.CONFIG, 2, @rate)
 
-PUB ADCDataReady{}: flag
+PUB ADCDataReady(): flag
 ' Flag indicating measurement is complete
 '   Returns: TRUE (-1) if measurement is complete, FALSE otherwise
     flag := 0
-    readreg(core#CONFIG, 2, @flag)
-    return ((flag >> core#OS) & 1) == 1
+    readreg(core.CONFIG, 2, @flag)
+    return ((flag >> core.OS) & 1) == 1
 
 PUB ADCScale(mV): curr_rng
 ' Set full-scale range of the ADC, in millivolts
@@ -125,30 +118,30 @@ PUB ADCScale(mV): curr_rng
 '       affect the maximum allowable input range of the chip. Per the datasheet,
 '       do NOT exceed VDD + 0.3V on the inputs.
     curr_rng := 0
-    readreg(core#CONFIG, 2, @curr_rng)
+    readreg(core.CONFIG, 2, @curr_rng)
     case mV
         256, 512, 1_024, 2_048, 4_096, 6_144:
             mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256)
             ' set scaling factor
             _uvolts_lsb := lookupz(mV: 187_5000, 125_0000, 62_5000, 31_2500, 15_6250, 7_8125)
-            mV <<= core#PGA
+            mV <<= core.PGA
         other:
-            curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
+            curr_rng := (curr_rng >> core.PGA) & core.PGA_BITS
             return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
 
-    mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @mV)
+    mV := ((curr_rng & core.PGA_MASK) | mV) & core.CONFIG_MASK
+    writereg(core.CONFIG, 2, @mV)
 
-PUB LastVoltage{}: uV
+PUB LastVoltage(): uV
 ' Return last ADC reading, in microvolts
     return wordtovolts(_last_adc)
 
-PUB Measure{} | tmp
+PUB Measure() | tmp
 ' Trigger a measurement, when in single-shot mode
     tmp := 0
-    readreg(core#CONFIG, 2, @tmp)
-    tmp |= (1 << core#OS)
-    writereg(core#CONFIG, 2, @tmp)
+    readreg(core.CONFIG, 2, @tmp)
+    tmp |= (1 << core.OS)
+    writereg(core.CONFIG, 2, @tmp)
 
 PUB OpMode(mode): curr_mode
 ' Set operation mode
@@ -156,19 +149,19 @@ PUB OpMode(mode): curr_mode
 '       CONT (0): Continuous measurement mode
 '      *SINGLE (1): Single-shot measurement mode
     curr_mode := 0
-    readreg(core#CONFIG, 2, @curr_mode)
+    readreg(core.CONFIG, 2, @curr_mode)
     case mode
         CONT, SINGLE:
-            mode <<= core#MODE
+            mode <<= core.MODE
         other:
-            return (curr_mode >> core#MODE) & %1
+            return (curr_mode >> core.MODE) & %1
 
-    mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @mode)
+    mode := ((curr_mode & core.MODE_MASK) | mode) & core.CONFIG_MASK
+    writereg(core.CONFIG, 2, @mode)
 
 PUB Voltage(ch): uV
 ' Return ADC reading, in milli-volts
-    return wordtovolts(adcdata{})
+    return wordtovolts(adcdata())
 
 PRI wordToVolts(adc_word): uV
 ' Scale ADC word to microvolts
@@ -180,13 +173,13 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
         $00..$03:
             cmd_pkt.byte[0] := SLAVE_WR | _addr_bits
             cmd_pkt.byte[1] := reg_nr
-            i2c.start{}
+            i2c.start()
             i2c.wrblock_lsbf(@cmd_pkt, 2)
 
-            i2c.start{}
+            i2c.start()
             i2c.write(SLAVE_RD | _addr_bits)
-            i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c#NAK)
-            i2c.stop{}
+            i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c.NAK)
+            i2c.stop()
         other:
             return
 
