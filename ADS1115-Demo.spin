@@ -3,9 +3,9 @@
     Filename: ADS1115-Demo.spin
     Author: Jesse Burt
     Description: Demo of the ADS1115 driver
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Dec 29, 2019
-    Updated Nov 8, 2020
+    Updated Apr 2, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -19,15 +19,15 @@ CON
     LED         = cfg#LED1
     SER_BAUD    = 115_200
 
-    I2C_SCL     = 26
-    I2C_SDA     = 27
+    I2C_SCL     = 28
+    I2C_SDA     = 29
     I2C_HZ      = 400_000
     ADDR_BITS   = %00                           ' Alternate slave addresses:
                                                 ' %00 (default), %01, %10, %11
 ' --
 
     DAT_COL     = 20
-    DAT_ROW     = 14
+    DAT_ROW     = 3
 
 OBJ
 
@@ -37,60 +37,20 @@ OBJ
     int     : "string.integer"
     ads1115 : "signal.adc.ads1115.i2c"
 
-PUB Main{} | dispmode, ch
+PUB Main{} | ch
 
     setup{}
     ads1115.adcscale(4_096)                     ' 256, 512, 1024, 2048, 4096, 6144 (mV)
     ads1115.adcdatarate(128)                    ' 8, 16, 32, 64, 128, 250, 475, 860 (Hz)
 
-    ser.hidecursor{}
-    dispmode := 0
     ch := 0
-    displaysettings{}
 
     repeat
-        case ser.rxcheck{}
-            "q", "Q":                           ' Quit the demo
-                ser.position(0, 17)
-                ser.str(string("Halting"))
-                ads1115.stop{}
-                time.msleep(5)
-                quit
-            "r", "R":                           ' Display mode: raw, calc'd
-                ser.position(0, 14)
-                repeat 2
-                    ser.clearline{}
-                    ser.newline{}
-                dispmode ^= 1
-
-        case dispmode
-            0:
-                ser.position(0, DAT_ROW+ch)
-                adcraw(ch)
-            1:
-                ser.position(0, DAT_ROW+ch)
-                adccalc(ch)
+        ser.position(0, DAT_ROW+ch)
+        adccalc(ch)
         ch++
         if ch > 3
             ch := 0
-
-    ser.showcursor{}
-    repeat
-
-PUB ADCRaw(ch) | raw
-' Display ADC data (raw word)
-    ser.str(string("ADC raw:  "))
-    ads1115.adcchannelenabled(ch)
-    ads1115.measure{}
-    repeat until ads1115.adcdataready{}
-    raw := ads1115.adcdata{}
-
-    ser.position(DAT_COL, DAT_ROW+ch)
-    ser.str(string("Ch"))
-    ser.dec(ch)
-    ser.chars(32, 5)
-    ser.str(int.hex(raw, 8))
-    ser.clearline{}
 
 PUB ADCCalc(ch) | uvolts
 ' Display ADC data (voltage, microvolts)
@@ -106,18 +66,6 @@ PUB ADCCalc(ch) | uvolts
     ser.chars(32, 5)
     decimal(uvolts, 1_000_000)
     ser.clearline{}
-
-PUB DisplaySettings{}
-
-    ser.position(0, 4)
-    ser.str(string("ADCScale: "))
-    ser.dec(ads1115.adcscale(-2))
-    ser.str(string("mV"))
-    ser.newline{}
-
-    ser.str(string("ADCDataRate: "))
-    ser.dec(ads1115.adcdatarate(-2))
-    ser.strln(string("Hz"))
 
 PRI Decimal(scaled, divisor) | whole[4], part[4], places, tmp, sign
 ' Display a scaled up number as a decimal
@@ -157,6 +105,7 @@ PRI Setup{}
         ads1115.stop{}
         time.msleep(5)
         ser.stop{}
+        repeat
 
 DAT
 {

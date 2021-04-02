@@ -3,9 +3,9 @@
     Filename: core.con.ads1115.spin
     Author: Jesse Burt
     Description: Low-level constants
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Dec 29, 2019
-    Updated Nov 7, 2020
+    Updated Apr 2, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -49,8 +49,6 @@ CON
 
     HI_THRESH           = $03
 
-#ifndef __propeller2__
 PUB Null{}
 ' This is not a top-level object
-#endif
 

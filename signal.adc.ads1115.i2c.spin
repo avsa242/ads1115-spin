@@ -3,9 +3,9 @@
     Filename: signal.adc.ads1115.i2c.spin
     Author: Jesse Burt
     Description: Driver for the TI ADS1115 ADC
-    Copyright (c) 2020
+    Copyright (c) 2021
     Started Dec 29, 2019
-    Updated Nov 8, 2020
+    Updated Apr 2, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -32,35 +32,37 @@ VAR
 
 OBJ
 
-    i2c : "com.i2c"                             ' PASM I2C Driver
-    core: "core.con.ads1115.spin"
+    i2c : "com.i2c"                             ' PASM I2C engine
+    core: "core.con.ads1115"                    ' HW-specific constants
     time: "time"                                ' Basic timing functions
-    u64 : "math.unsigned64"
+    u64 : "math.unsigned64"                     ' unsigned 64-bit int math
 
 PUB Null{}
 ' This is not a top-level object
 
-PUB Start{}: okay
+PUB Start{}: status
 ' Start with "standard" Propeller I2C pins, default slave address, and 100kHz
-    okay := startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
+    return startx(DEF_SCL, DEF_SDA, DEF_HZ, %00)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): okay
-
-    if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
-        if I2C_HZ =< core#I2C_MAX_FREQ
-            if lookdown(ADDR_BITS: %00, %01, %10, %11)
-                if okay := i2c.setupx(SCL_PIN, SDA_PIN, I2C_HZ)
-                    time.msleep(1)
-                    _addr_bits := ADDR_BITS << 1
-                    if i2c.present(SLAVE_WR | _addr_bits)
-                        defaults{}
-                        return okay
-
-    return FALSE                                ' Something above went wrong
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
+' Start using custom I/O settings and bus speed
+    if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
+}   I2C_HZ =< core#I2C_MAX_FREQ
+        if lookdown(ADDR_BITS: %00, %01, %10, %11)
+            if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
+                time.msleep(1)
+                _addr_bits := ADDR_BITS << 1
+                if i2c.present(SLAVE_WR | _addr_bits)
+                    defaults{}
+                    return
+    ' if this point is reached, something above failed
+    ' Double check I/O pin assignments, connections, power
+    ' Lastly - make sure you have at least one free core/cog
+    return FALSE
 
 PUB Stop{}
 
-    i2c.terminate{}
+    i2c.deinit{}
 
 PUB Defaults{}
 ' Set factory defaults
@@ -178,14 +180,13 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
         $00..$03:
             cmd_pkt.byte[0] := SLAVE_WR | _addr_bits
             cmd_pkt.byte[1] := reg_nr
-            i2c.start
-            i2c.wr_block (@cmd_pkt, 2)
+            i2c.start{}
+            i2c.wrblock_lsbf(@cmd_pkt, 2)
 
-            i2c.start
-            i2c.write (SLAVE_RD | _addr_bits)
-            repeat tmp from nr_bytes-1 to 0
-                byte[ptr_buff][tmp] := i2c.read(tmp == 0)
-            i2c.stop
+            i2c.start{}
+            i2c.write(SLAVE_RD | _addr_bits)
+            i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c#NAK)
+            i2c.stop{}
         other:
             return
 
@@ -196,10 +197,8 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
             cmd_pkt.byte[0] := SLAVE_WR | _addr_bits
             cmd_pkt.byte[1] := reg_nr
             i2c.start
-            i2c.wr_block (@cmd_pkt, 2)
-
-            repeat tmp from nr_bytes-1 to 0
-                i2c.write (byte[ptr_buff][tmp])
+            i2c.wrblock_lsbf(@cmd_pkt, 2)
+            i2c.wrblock_msbf(ptr_buff, nr_bytes)
             i2c.stop
         other:
             return

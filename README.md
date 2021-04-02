@@ -21,7 +21,7 @@ P1/SPIN1:
 * 1 extra core/cog for the PASM I2C driver
 
 ~~P2/SPIN2:~~
-~~* p2-spin-standard-library~~
+* ~~p2-spin-standard-library~~
 
 ## Compiler Compatibility
 
