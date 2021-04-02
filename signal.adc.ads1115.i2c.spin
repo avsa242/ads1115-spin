@@ -196,10 +196,10 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
         $01..$03:
             cmd_pkt.byte[0] := SLAVE_WR | _addr_bits
             cmd_pkt.byte[1] := reg_nr
-            i2c.start()
+            i2c.start{}
             i2c.wrblock_lsbf(@cmd_pkt, 2)
             i2c.wrblock_msbf(ptr_buff, nr_bytes)
-            i2c.stop()
+            i2c.stop{}
         other:
             return
 
