@@ -50,7 +50,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 }   I2C_HZ =< core#I2C_MAX_FREQ
         if lookdown(ADDR_BITS: %00, %01, %10, %11)
             if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
-                time.msleep(core#T_POR)
+                time.usleep(core#T_POR)
                 _addr_bits := ADDR_BITS << 1
                 if i2c.present(SLAVE_WR | _addr_bits)
                     defaults{}
