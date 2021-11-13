@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2021
     Started Dec 29, 2019
-    Updated Apr 2, 2021
+    Updated Nov 13, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -50,7 +50,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 }   I2C_HZ =< core#I2C_MAX_FREQ
         if lookdown(ADDR_BITS: %00, %01, %10, %11)
             if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
-                time.msleep(1)
+                time.msleep(core#T_POR)
                 _addr_bits := ADDR_BITS << 1
                 if i2c.present(SLAVE_WR | _addr_bits)
                     defaults{}
@@ -61,7 +61,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
     return FALSE
 
 PUB Stop{}
-
+' Stop I2C engine
     i2c.deinit{}
 
 PUB Defaults{}
@@ -85,7 +85,7 @@ PUB ADCChannelEnabled(ch): curr_ch
     ch := ((curr_ch & core#MUX_MASK) | ch) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @ch)
 
-PUB ADCData{}: adc_word | tmp
+PUB ADCData{}: adc_word
 ' Read measurement from channel ch
 '   Valid values: *0, 1, 2, 3
 '   Any other value is ignored
@@ -139,7 +139,7 @@ PUB ADCScale(mV): curr_rng
     mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @mV)
 
-PUB LastVoltage{}: uV
+PUB LastVoltage{}: volts
 ' Return last ADC reading, in microvolts
     return wordtovolts(_last_adc)
 
@@ -166,11 +166,11 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
     writereg(core#CONFIG, 2, @mode)
 
-PUB Voltage(ch): uV
-' Return ADC reading, in milli-volts
+PUB Voltage(ch): volts
+' Return ADC reading, in microvolts
     return wordtovolts(adcdata{})
 
-PRI wordToVolts(adc_word): uV
+PRI wordToVolts(adc_word): volts
 ' Scale ADC word to microvolts
     return u64.multdiv(adc_word, _uvolts_lsb, 1_0000)
 
