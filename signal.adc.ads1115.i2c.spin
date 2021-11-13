@@ -80,9 +80,9 @@ PUB ADCChannelEnabled(ch): curr_ch
         0..3:
             ch := (ch + %100) << core#MUX
         other:
-            return ((ch >> core#MUX) & %111) - %100
+            return (((ch >> core#MUX) & %111) - %100)
 
-    ch := ((curr_ch & core#MUX_MASK) | ch) & core#CONFIG_MASK
+    ch := ((curr_ch & core#MUX_MASK) | ch)
     writereg(core#CONFIG, 2, @ch)
 
 PUB ADCData{}: adc_word
@@ -90,7 +90,7 @@ PUB ADCData{}: adc_word
 '   Valid values: *0, 1, 2, 3
 '   Any other value is ignored
     readreg(core#CONVERSION, 2, @adc_word)
-    ~~adc_word                                  ' Extend sign of result
+    ~~adc_word                                  ' extend sign bit
     _last_adc := adc_word
 
 PUB ADCDataRate(rate): curr_rate
@@ -101,12 +101,13 @@ PUB ADCDataRate(rate): curr_rate
     readreg(core#CONFIG, 2, @curr_rate)
     case rate
         8, 16, 32, 64, 128, 250, 475, 860:
-            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
+            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) {
+}           << core#DR
         other:
-            curr_rate := (curr_rate >> core#DR) & core#DR_BITS
+            curr_rate := ((curr_rate >> core#DR) & core#DR_BITS)
             return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
 
-    rate := ((curr_rate & core#DR_MASK & core#OS_MASK) | rate) & core#CONFIG_MASK
+    rate := ((curr_rate & core#DR_MASK & core#OS_MASK) | rate)
     writereg(core#CONFIG, 2, @rate)
 
 PUB ADCDataReady{}: flag
@@ -116,28 +117,30 @@ PUB ADCDataReady{}: flag
     readreg(core#CONFIG, 2, @flag)
     return ((flag >> core#OS) & 1) == 1
 
-PUB ADCScale(mV): curr_rng
+PUB ADCScale(scale): curr_scl
 ' Set full-scale range of the ADC, in millivolts
 '   Valid values:
 '       256, 512, 1024, *2048, 4096, 6144
 '   Any other value polls the chip and returns the current setting
-'   NOTE: This merely affects the scaling of values returned in measurements. It doesn't
-'       affect the maximum allowable input range of the chip. Per the datasheet,
-'       do NOT exceed VDD + 0.3V on the inputs.
-    curr_rng := 0
-    readreg(core#CONFIG, 2, @curr_rng)
-    case mV
+'   NOTE: This merely affects the scaling of values returned in measurements.
+'   It doesn't affect the maximum allowable input range of the chip.
+'   Per the datasheet, do NOT exceed VDD + 0.3V on the inputs.
+    curr_scl := 0
+    readreg(core#CONFIG, 2, @curr_scl)
+    case scale
         256, 512, 1_024, 2_048, 4_096, 6_144:
-            mV := lookdownz(mV: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256)
+            scale := lookdownz(scale: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256)
             ' set scaling factor
-            _uvolts_lsb := lookupz(mV: 187_5000, 125_0000, 62_5000, 31_2500, 15_6250, 7_8125)
-            mV <<= core#PGA
+            _uvolts_lsb := lookupz(scale: 187_5000, 125_0000, 62_5000, {
+}           31_2500, 15_6250, 7_8125)
+            scale <<= core#PGA
         other:
-            curr_rng := (curr_rng >> core#PGA) & core#PGA_BITS
-            return lookupz(curr_rng: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
+            curr_scl := ((curr_scl >> core#PGA) & core#PGA_BITS)
+            return lookupz(curr_scl: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256,{
+}           0_256, 0_256)
 
-    mV := ((curr_rng & core#PGA_MASK) | mV) & core#CONFIG_MASK
-    writereg(core#CONFIG, 2, @mV)
+    scale := ((curr_scl & core#PGA_MASK) | scale)
+    writereg(core#CONFIG, 2, @scale)
 
 PUB LastVoltage{}: volts
 ' Return last ADC reading, in microvolts
@@ -161,9 +164,9 @@ PUB OpMode(mode): curr_mode
         CONT, SINGLE:
             mode <<= core#MODE
         other:
-            return (curr_mode >> core#MODE) & %1
+            return ((curr_mode >> core#MODE) & 1)
 
-    mode := ((curr_mode & core#MODE_MASK) | mode) & core#CONFIG_MASK
+    mode := ((curr_mode & core#MODE_MASK) | mode)
     writereg(core#CONFIG, 2, @mode)
 
 PUB Voltage(ch): volts
