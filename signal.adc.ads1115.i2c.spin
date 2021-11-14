@@ -146,6 +146,10 @@ PUB ADCScale(scale): curr_scl
     scale := ((curr_scl & core#PGA_MASK) | scale)
     writereg(core#CONFIG, 2, @scale)
 
+PUB ADCWord2Volts(adc_word): volts
+' Scale ADC word to microvolts
+    return u64.multdiv(adc_word, _uvolts_lsb, 1_0000)
+
 PUB IntActiveState(state): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (0), HIGH (1)
@@ -186,12 +190,12 @@ PUB IntThreshHi(thresh): curr_thr
 '   for proper operation
     case thresh
         0..5_800000:                            ' supply max + input abs. max
-            thresh := u64.multdiv(thresh, 10_000, _uvolts_lsb)
+            thresh := volts2adcword(thresh)
             writereg(core#HI_THRESH, 2, @thresh)
         other:
             curr_thr := 0
             readreg(core#HI_THRESH, 2, @curr_thr)
-            return wordtovolts(curr_thr)
+            return adcword2volts(curr_thr)
 
 PUB IntThreshLow(thresh): curr_thr
 ' Set voltage interrupt low threshold, in microvolts
@@ -201,16 +205,16 @@ PUB IntThreshLow(thresh): curr_thr
 '   for proper operation
     case thresh
         0..5_800000:                            ' supply max + input abs. max
-            thresh := u64.multdiv(thresh, 10_000, _uvolts_lsb)
+            thresh := volts2adcword(thresh)
             writereg(core#LO_THRESH, 2, @thresh)
         other:
             curr_thr := 0
             readreg(core#LO_THRESH, 2, @curr_thr)
-            return wordtovolts(curr_thr)
+            return adcword2volts(curr_thr)
 
 PUB LastVoltage{}: volts
 ' Return last ADC reading, in microvolts
-    return wordtovolts(_last_adc)
+    return adcword2volts(_last_adc)
 
 PUB Measure{} | tmp
 ' Trigger a measurement, when in single-shot mode
@@ -238,13 +242,13 @@ PUB OpMode(mode): curr_mode
 PUB Voltage{}: volts
 ' Return ADC reading, in microvolts
 '   NOTE: Measurement returned is from channel set with ADCChannelEnabled()
-    return wordtovolts(adcdata{})
+    return adcword2volts(adcdata{})
 
-PRI wordToVolts(adc_word): volts
-' Scale ADC word to microvolts
-    return u64.multdiv(adc_word, _uvolts_lsb, 1_0000)
+PUB Volts2ADCWord(volts): adc_word
+' Scale microvolts to ADC word
+    return u64.multdiv(volts, 1_0000, _uvolts_lsb)
 
-PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
+PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from reg_nr into ptr_buff
     case reg_nr
         $00..$03:
@@ -260,7 +264,7 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
         other:
             return
 
-PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt, tmp
+PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes from ptr_buff to the slave device
     case reg_nr
         $01..$03:
