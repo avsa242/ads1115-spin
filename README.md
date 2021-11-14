@@ -8,11 +8,13 @@ This is a P8X32A/Propeller driver object for the TI ADS1115 ADC
 ## Salient Features
 
 * I2C connection at up to 400kHz
+* Alternate I2C addresses supported
 * Read in continuous or single-shot measurement modes
 * Measurement ready flag for single-shot mode
 * Set full-scale range and sampling rate
-* Read raw data or scaled to mV
-* Supports alternate slave addresses
+* Read data as ADC words or microvolts
+* Read current or previous measurement
+* Set interrupt (low, high) thresholds, persistence
 
 ## Requirements
 
@@ -25,22 +27,17 @@ P2/SPIN2:
 
 ## Compiler Compatibility
 
-* P1/SPIN1: OpenSpin (tested with 1.00.81), FlexSpin (tested with 5.3.0)
-* P2/SPIN2: FlexSpin (tested with 5.3.0)
+* P1/SPIN1 OpenSpin (bytecode): OK, tested with 1.00.81
+* P1/SPIN1 FlexSpin (bytecode): OK, tested with 5.9.4-beta
+* P1/SPIN1 FlexSpin (native): OK, tested with 5.9.4-beta
+* ~~P2/SPIN2 FlexSpin (bytecode): FTBFS, tested with 5.9.4-beta~~
+* P2/SPIN2 FlexSpin (native): OK, tested with 5.9.4-beta
 * ~~BST~~ (incompatible - no preprocessor)
 * ~~Propeller Tool~~ (incompatible - no preprocessor)
 * ~~PNut~~ (incompatible - no preprocessor)
 
 ## Limitations
 
-* Very early in development - may malfunction, or outright fail to build
 * Doesn't support the high-speed (3.4MHz) I2C mode
-* Doesn't support comparator modes/interrupts (for under/over-voltage detection)
+* Differential measurements not supported yet
 
-## TODO
-
-- [x] Port to SPIN2
-- [ ] Add support for under/over-voltage detection
-- [ ] Add interrupt support
-- [ ] Add differential input support
-- [ ] Add support for 3.4MHz HS I2C mode
