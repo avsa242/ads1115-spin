@@ -5,22 +5,26 @@
     Description: Driver for the TI ADS1115 ADC (P2 version)
     Copyright (c) 2021
     Started Apr 2, 2021
-    Updated Nov 13, 2021
+    Updated Nov 14, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
 
 CON
 
-    SLAVE_WR            = core.SLAVE_ADDR
-    SLAVE_RD            = core.SLAVE_ADDR|1
+    SLAVE_WR        = core.SLAVE_ADDR
+    SLAVE_RD        = core.SLAVE_ADDR|1
 
-    DEF_HZ              = 100_000
-    I2C_MAX_FREQ        = core.I2C_MAX_FREQ
+    DEF_HZ          = 100_000
+    I2C_MAX_FREQ    = core.I2C_MAX_FREQ
 
 ' Operation modes
-    CONT                = 0
-    SINGLE              = 1
+    CONT            = 0
+    SINGLE          = 1
+
+' Interrupt active state
+    LOW             = 0
+    HIGH            = 1
 
 VAR
 
@@ -134,6 +138,68 @@ PUB ADCScale(scale): curr_scl
 
     scale := ((curr_scl & core.PGA_MASK) | scale)
     writereg(core.CONFIG, 2, @scale)
+
+PUB IntActiveState(state): curr_state
+' Set interrupt pin active state/logic level
+'   Valid values: LOW (0), HIGH (1)
+'   Any other value polls the chip and returns the current setting
+    curr_state := 0
+    readreg(core#CONFIG, 2, @curr_state)
+    case state
+        LOW, HIGH:
+            state <<= core#COMP_POL
+        other:
+            return ((curr_state >> core#COMP_POL) & 1)
+
+    state := ((curr_state & core#COMP_POL_MASK) | state)
+    writereg(core#CONFIG, 2, @state)
+
+PUB IntPersistence(cycles): curr_cyc
+' Set minimum number of measurements beyond threshold required to assert
+'   an interrupt
+'   Valid values: 1, 2, 4
+'   Any other value polls the chip and returns the current setting
+    curr_cyc := 0
+    readreg(core#CONFIG, 2, @curr_cyc)
+    case cycles
+        1, 2, 4:
+            cycles := lookdownz(cycles: 1, 2, 4) << core#COMP_QUE
+        other:
+            curr_cyc := ((curr_cyc >> core#COMP_QUE) & core#COMP_QUE_BITS)
+            return lookupz(curr_cyc: 1, 2, 4)
+
+    cycles := ((curr_cyc & core#COMP_QUE_MASK) | cycles)
+    writereg(core#CONFIG, 2, @cycles)
+
+PUB IntThreshHi(thresh): curr_thr
+' Set voltage interrupt high threshold, in microvolts
+'   Valid values: 0..5_800000 (0..5.8V)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: This value should always be higher than IntThreshLow(),
+'   for proper operation
+    case thresh
+        0..5_800000:                            ' supply max + input abs. max
+            thresh := u64.multdiv(thresh, 10_000, _uvolts_lsb)
+            writereg(core#HI_THRESH, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#HI_THRESH, 2, @curr_thr)
+            return wordtovolts(curr_thr)
+
+PUB IntThreshLow(thresh): curr_thr
+' Set voltage interrupt low threshold, in microvolts
+'   Valid values: 0..5_800000 (0..5.8V)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: This value should always be lower than IntThreshHi(),
+'   for proper operation
+    case thresh
+        0..5_800000:                            ' supply max + input abs. max
+            thresh := u64.multdiv(thresh, 10_000, _uvolts_lsb)
+            writereg(core#LO_THRESH, 2, @thresh)
+        other:
+            curr_thr := 0
+            readreg(core#LO_THRESH, 2, @curr_thr)
+            return wordtovolts(curr_thr)
 
 PUB LastVoltage(): volts
 ' Return last ADC reading, in microvolts
