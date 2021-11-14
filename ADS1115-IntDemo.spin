@@ -56,6 +56,15 @@ PUB Main{} | uV
     adc.intactivestate(adc#HIGH)                ' LOW, HIGH
     dira[LED] := 1
 
+    ' The demo continuously reads the ADC's channel 0
+    ' Interrupt thresholds are set above: 1.2V low, 2.0V high
+    ' A reading above the high threshold should light the P2 board's 1st LED
+    ' A reading below the low threshold should turn it off
+    ' Testing is done with a 2-axis joystick
+    '   (Parallax #27800, https://www.parallax.com/product/2-axis-joystick/)
+    '   L/R+ (or U/D+) connected to supply voltage
+    '   GND connected to GND
+    '   L/R (or U/D) connected to ADC channel 0
     repeat
         adc.measure{}
         repeat until adc.adcdataready{}
