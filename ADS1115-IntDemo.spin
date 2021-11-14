@@ -68,7 +68,7 @@ PUB Main{} | uV
     repeat
         adc.measure{}
         repeat until adc.adcdataready{}
-        uV := adc.voltage(0)
+        uV := adc.voltage{}
         ser.position(0, 3)
         ser.str(string("ADC: "))
         decimal(uV, 1_000_000)

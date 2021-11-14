@@ -228,8 +228,9 @@ PUB OpMode(mode): curr_mode
     mode := ((curr_mode & core.MODE_MASK) | mode)
     writereg(core.CONFIG, 2, @mode)
 
-PUB Voltage(ch): volts
+PUB Voltage(): volts
 ' Return ADC reading, in microvolts
+'   NOTE: Measurement returned is from channel set with ADCChannelEnabled()
     return wordtovolts(adcdata())
 
 PRI wordToVolts(adc_word): volts
