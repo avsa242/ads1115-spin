@@ -35,7 +35,7 @@ OBJ
     ser : "com.serial.terminal.ansi"
     time: "time"
     int : "string.integer"
-    adc : "signal.adc.ads1115.i2c"
+    adc : "signal.adc.ads1115"
 
 VAR
 
