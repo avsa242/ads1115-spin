@@ -1,6 +1,6 @@
 {
     --------------------------------------------
-    Filename: signal.adc.ads1115.i2c.spin2
+    Filename: signal.adc.ads1115.spin2
     Author: Jesse Burt
     Description: Driver for the TI ADS1115 ADC (P2 version)
     Copyright (c) 2022
@@ -58,11 +58,12 @@ PUB startx(SCL_PIN, SDA_PIN, I2C_HZ=DEF_HZ, ADDR_BITS=0): status
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
 
-PUB Stop()
-' Stop I2C engine
+PUB stop()
+' Stop the driver
     i2c.deinit()
+    _uvolts_lsb := _last_adc := _addr_bits := 0
 
-PUB Defaults()
+PUB defaults()
 ' Set factory defaults
     opmode(SINGLE)
     adc_scale(2_048)
@@ -254,7 +255,7 @@ PUB volts2adc(volts): adc_word
 ' Scale microvolts to ADC word
     return u64.multdiv(volts, 1_0000, _uvolts_lsb)
 
-PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from reg_nr into ptr_buff
     case reg_nr
         $00..$03:
@@ -270,7 +271,7 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return
 
-PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes from ptr_buff to the slave device
     case reg_nr
         $01..$03:
