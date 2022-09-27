@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2022
     Started Dec 29, 2019
-    Updated Sep 24, 2022
+    Updated Sep 27, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -201,14 +201,14 @@ PUB int_latch_ena(state): curr_state
     state := ((curr_state & core#COMP_LAT_MASK) | state)
     writereg(core#CONFIG, 2, @state)
 
-PUB int_set_thresh_hi(thresh)
+PUB int_set_hi_thresh(thresh)
 ' Set voltage interrupt high threshold, in microvolts
 '   Valid values: 0..5_800000 (0..5.8V; clamped to range)
 '   NOTE: This value should always be higher than int_thresh_low(), for proper operation
     thresh := volts2adc(0 #> thresh <# 5_800000)
     writereg(core#HI_THRESH, 2, @thresh)
 
-PUB int_set_thresh_lo(thresh)
+PUB int_set_lo_thresh(thresh)
 ' Set voltage interrupt low threshold, in microvolts
 '   Valid values: 0..5_800000 (0..5.8V; clamped to range)
 '   NOTE: This value should always be lower than int_thresh_hi(),
@@ -216,13 +216,13 @@ PUB int_set_thresh_lo(thresh)
     thresh := volts2adc(0 #> thresh <# 5_800000)
     writereg(core#LO_THRESH, 2, @thresh)
 
-PUB int_thresh_hi{}: thresh
+PUB int_hi_thresh{}: thresh
 ' Get voltage interrupt high threshold, in microvolts
     thresh := 0
     readreg(core#HI_THRESH, 2, @thresh)
     return adc2volts(thresh)
 
-PUB int_thresh_lo{}: curr_thr
+PUB int_lo_thresh{}: curr_thr
 ' Get voltage interrupt low threshold, in microvolts
     curr_thr := 0
     readreg(core#LO_THRESH, 2, @curr_thr)

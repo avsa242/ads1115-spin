@@ -6,7 +6,7 @@
         interrupt functionality
     Copyright (c) 2022
     Started Nov 13, 2021
-    Updated Aug 4, 2022
+    Updated Sep 27, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -48,13 +48,13 @@ PUB main{} | uV
     setup{}
     adc.defaults{}
 
-    adc.adc_chan_enabled(0)                     ' 0..3
+    adc.adc_chan_ena(0)                         ' 0..3
     adc.adc_scale(4_096)                        ' 256, 512, 1024, 2048, 4096,
                                                 '   6144 (mV)
-    adc.int_persistence(1)                      ' 1, 2, 4 (interrupt cycles)
-    adc.int_thresh_low(1_200000)                ' 0 .. 5_800000 (0..5.8V)
-    adc.int_thresh_hi(2_000000)                 ' int_thresh_low() .. 5_800000
-    adc.int_active_state(adc#HIGH)              ' LOW, HIGH
+    adc.int_duration(1)                         ' 1, 2, 4 (interrupt cycles)
+    adc.int_set_lo_thresh(1_200000)             ' 0 .. 5_800000 (0..5.8V)
+    adc.int_set_hi_thresh(2_000000)             ' int_thresh_low() .. 5_800000
+    adc.int_polarity(adc#HIGH)                  ' LOW, HIGH
     dira[LED] := 1
 
     ' The demo continuously reads the ADC's channel 0
@@ -63,12 +63,12 @@ PUB main{} | uV
     ' A reading below the low threshold should turn it off
     ' Testing is done with a 2-axis joystick
     '   (Parallax #27800, https://www.parallax.com/product/2-axis-joystick/)
-    '   L/R+ (or U/D+) connected to supply voltage
+    '   L/R+ (or U/D+) connected to supply voltage (3.3v)
     '   GND connected to GND
     '   L/R (or U/D) connected to ADC channel 0
     repeat
         adc.measure{}
-        repeat until adc.adc_data_ready{}
+        repeat until adc.adc_data_rdy{}
         uV := adc.voltage{}
         ser.position(0, 3)
         ser.str(string("ADC: "))
