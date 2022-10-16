@@ -6,7 +6,7 @@
         interrupt functionality
     Copyright (c) 2022
     Started Nov 13, 2021
-    Updated Sep 27, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -33,7 +33,7 @@ CON
 
 OBJ
 
-    cfg : "core.con.boardcfg.flip"
+    cfg : "boardcfg.flip"
     ser : "com.serial.terminal.ansi"
     time: "time"
     adc : "signal.adc.ads1115"

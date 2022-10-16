@@ -5,7 +5,7 @@
     Description: Demo of the ADS1115 driver
         * Power data output
     Started Dec 29, 2019
-    Updated Sep 27, 2022
+    Updated Oct 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -28,7 +28,7 @@ CON
 
 OBJ
 
-    cfg : "core.con.boardcfg.flip"
+    cfg : "boardcfg.flip"
     ser : "com.serial.terminal.ansi"
     adc : "signal.adc.ads1115"
     time: "time"
@@ -49,7 +49,7 @@ PUB main{}
     adc.adc_data_rate(128)                      ' 8, 16, 32, 64, 128, 250, 475, 860 (Hz)
     adc.opmode(adc#CONT)
     adc.adc_chan_ena(0)
-    demo{}
+    show_adc_data{}
 
 #include "adcdemo.common.spinh"
 
