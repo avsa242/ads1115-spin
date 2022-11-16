@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2022
     Started Dec 29, 2019
-    Updated Sep 27, 2022
+    Updated Nov 16, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -107,8 +107,7 @@ PUB adc_data_rate(rate): curr_rate
     readreg(core#CONFIG, 2, @curr_rate)
     case rate
         8, 16, 32, 64, 128, 250, 475, 860:
-            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) {
-}           << core#DR
+            rate := lookdownz(rate: 8, 16, 32, 64, 128, 250, 475, 860) << core#DR
         other:
             curr_rate := ((curr_rate >> core#DR) & core#DR_BITS)
             return lookupz(curr_rate: 8, 16, 32, 64, 128, 250, 475, 860)
@@ -137,19 +136,18 @@ PUB adc_scale(scale): curr_scl
         256, 512, 1_024, 2_048, 4_096, 6_144:
             scale := lookdownz(scale: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256)
             { set scaling factor }
-            _uvolts_lsb := lookupz(scale: 187_5000, 125_0000, 62_5000, {
-}           31_2500, 15_6250, 7_8125)
+            _uvolts_lsb := lookupz(scale: 187_5000, 125_0000, 62_5000, 31_2500, 15_6250, 7_8125)
             scale <<= core#PGA
         other:
             curr_scl := ((curr_scl >> core#PGA) & core#PGA_BITS)
-            return lookupz(curr_scl: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256,{
-}           0_256, 0_256)
+            return lookupz(curr_scl: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
 
     scale := ((curr_scl & core#PGA_MASK) | scale)
     writereg(core#CONFIG, 2, @scale)
 
 PUB adc2volts(adc_word): volts
 ' Scale ADC word to microvolts
+'   NOTE: It is possible to read negative voltages (down to -300mV)
     return u64.multdiv(adc_word, _uvolts_lsb, 1_0000)
 
 PUB int_polarity(state): curr_state
