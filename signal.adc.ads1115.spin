@@ -5,7 +5,7 @@
     Description: Driver for the TI ADS1115 ADC
     Copyright (c) 2022
     Started Dec 29, 2019
-    Updated Nov 16, 2022
+    Updated Nov 22, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -76,20 +76,9 @@ PUB defaults{}
     adc_scale(2_048)
     adc_data_rate(128)
 
-PUB adc_chan_ena(ch): curr_ch
-' Set active ADC channel
-'   Valid values: 0..3
-'   Any other value polls the chip and returns the current setting
-    curr_ch := 0
-    readreg(core#CONFIG, 2, @curr_ch)
-    case ch
-        0..3:
-            ch := (ch + %100) << core#MUX
-        other:
-            return (((ch >> core#MUX) & %111) - %100)
-
-    ch := ((curr_ch & core#MUX_MASK) | ch)
-    writereg(core#CONFIG, 2, @ch)
+PUB adc_channel{}: ch
+' Get currently active ADC channel
+    return adc_chan_ena(-1)
 
 PUB adc_data{}: adc_word
 ' Read measurement from channel ch
@@ -253,9 +242,29 @@ PUB opmode(mode): curr_mode
     mode := ((curr_mode & core#MODE_MASK) | mode)
     writereg(core#CONFIG, 2, @mode)
 
+PUB set_adc_channel(ch)
+' Set active ADC channel
+'   Valid values: 0..3 (clamped to range)
+    adc_chan_ena(0 #> ch <# 3)
+
 PUB volts2adc(volts): adc_word
 ' Scale microvolts to ADC word
     return u64.multdiv(volts, 1_0000, _uvolts_lsb)
+
+PRI adc_chan_ena(ch): curr_ch
+' Set active ADC channel
+'   Valid values: 0..3
+'   Any other value polls the chip and returns the current setting
+    curr_ch := 0
+    readreg(core#CONFIG, 2, @curr_ch)
+    case ch
+        0..3:
+            ch := (ch + %100) << core#MUX
+        other:
+            return (((ch >> core#MUX) & %111) - %100)
+
+    ch := ((curr_ch & core#MUX_MASK) | ch)
+    writereg(core#CONFIG, 2, @ch)
 
 PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from reg_nr into ptr_buff
