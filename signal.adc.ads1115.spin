@@ -58,7 +58,7 @@ PUB start{}: status
 
 PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 ' Start using custom I/O settings and bus speed
-    if ( lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
+    if ( lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) )
         if ( lookdown(ADDR_BITS: %00, %01, %10, %11) )
             if ( status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ) )
                 time.usleep(core#T_POR)
