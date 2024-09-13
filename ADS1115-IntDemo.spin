@@ -1,60 +1,54 @@
 {
-    --------------------------------------------
-    Filename: ADS1115-IntDemo.spin
-    Author: Jesse Burt
-    Description: Demo of the ADS1115 driver
-        interrupt functionality
-    Copyright (c) 2022
-    Started Nov 13, 2021
-    Updated Oct 16, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       ADS1115-IntDemo.spin
+    Description:    Demo of the ADS1115 driver
+        * interrupt functionality
+    Author:         Jesse Burt
+    Started:        Nov 13, 2021
+    Updated:        Sep 13, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = xtal1+pll16x
+    _xinfreq    = 5_000_000
 
 ' -- User-definable constants
-    LED         = cfg#LED1
-    SER_BAUD    = 115_200
-
-    I2C_SCL     = 28
-    I2C_SDA     = 29
-    I2C_FREQ    = 400_000
-    ADDR_BITS   = %00                           ' Alternate I2C addresses:
-                                                ' %00 (default), %01, %10, %11
-
+    LED         = cfg.LED1
     INT1        = 24
 ' --
 
     VF          = 1_000_000
 
+
 OBJ
 
-    cfg : "boardcfg.flip"
-    ser : "com.serial.terminal.ansi"
-    time: "time"
-    adc : "signal.adc.ads1115"
+    cfg:    "boardcfg.flip"
+    time:   "time"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    adc:    "signal.adc.ads1115" | SCL=28, SDA=29, I2C_FREQ=100_000, I2C_ADDR=%00
+
 
 VAR
 
     long _isr_stack[50]                         ' stack space for ISR
     long _intflag
 
-PUB main{} | uV
 
-    setup{}
-    adc.defaults{}
+PUB main() | uV
 
-    adc.adc_chan_ena(0)                         ' 0..3
-    adc.adc_scale(4_096)                        ' 256, 512, 1024, 2048, 4096,
-                                                '   6144 (mV)
+    setup()
+
+    adc.defaults()
+
+    adc.set_adc_channel(0)                      ' 0..3
+    adc.adc_scale(4_096)                        ' 256, 512, 1024, 2048, 4096, 6144 (mV)
     adc.int_duration(1)                         ' 1, 2, 4 (interrupt cycles)
     adc.int_set_lo_thresh(1_200000)             ' 0 .. 5_800000 (0..5.8V)
     adc.int_set_hi_thresh(2_000000)             ' int_thresh_low() .. 5_800000
-    adc.int_polarity(adc#HIGH)                  ' LOW, HIGH
+    adc.int_polarity(adc.HIGH)                  ' LOW, HIGH
     dira[LED] := 1
 
     ' The demo continuously reads the ADC's channel 0
@@ -67,21 +61,21 @@ PUB main{} | uV
     '   GND connected to GND
     '   L/R (or U/D) connected to ADC channel 0
     repeat
-        adc.measure{}
-        repeat until adc.adc_data_rdy{}
-        uV := adc.voltage{}
-        ser.position(0, 3)
-        ser.str(string("ADC: "))
-        ser.printf2(string("Voltage: %d.%06.6dv\n\r"), (adc.voltage{} / VF), {
-}       ||(adc.voltage{} // VF))
-        ser.clearline{}
+        adc.measure()
+        repeat until adc.adc_data_rdy()
+        uV := adc.voltage()
+        ser.pos_xy(0, 3)
+        ser.str(@"ADC: ")
+        ser.printf2(@"Voltage: %d.%06.6dv\n\r", (adc.voltage() / VF), ||(adc.voltage() // VF))
+        ser.clear_line()
 
-        if (_intflag)
+        if ( _intflag )
             outa[LED] := 1
         else
             outa[LED] := 0
 
-PRI isr{}
+
+PRI isr()
 ' Interrupt service routine
     dira[INT1] := 0                             ' INT1 as input
     repeat
@@ -90,23 +84,26 @@ PRI isr{}
         waitpne(|< INT1, |< INT1, 0)            ' now wait for it to clear
         _intflag := 0                           '   clear flag
 
-PRI setup{}
 
-    ser.start(SER_BAUD)
+PRI setup()
+
+    ser.start()
     time.msleep(30)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
-    if adc.startx(I2C_SCL, I2C_SDA, I2C_FREQ, ADDR_BITS)
-        ser.strln(string("ADS1115 driver started"))
+    ser.clear()
+    ser.strln(@"Serial terminal started")
+
+    if ( adc.start() )
+        ser.strln(@"ADS1115 driver started")
     else
-        ser.strln(string("ADS1115 driver failed to start - halting"))
+        ser.strln(@"ADS1115 driver failed to start - halting")
         repeat
 
-    cognew(isr{}, @_isr_stack)
+    cognew(isr(), @_isr_stack)
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

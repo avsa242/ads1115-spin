@@ -1,54 +1,62 @@
 {
-    --------------------------------------------
-    Filename: ADS1115-Demo.spin2
-    Author: Jesse Burt
-    Description: Demo of the ADS1115 driver (P2 version)
+----------------------------------------------------------------------------------------------------
+    Filename:       ADS1115-Demo.spin2
+    Description:    Demo of the ADS1115 driver
         * Voltage data output
-    Copyright (c) 2023
-    Started Apr 2, 2021
-    Updated Jul 14, 2023
-    See end of file for terms of use.
-    --------------------------------------------
+    Author:         Jesse Burt
+    Started:        Feb 8, 2020
+    Updated:        Sep 13, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
 
-    _clkfreq        = cfg._clkfreq_def
-    _xtlfreq        = cfg._xtlfreq
+    _clkfreq    = 180_000_000
+    _xtlfreq    = 20_000_000
 
-' -- User-modifiable constants
-    SER_BAUD        = 2_000_000
-
-' --
 
 OBJ
 
-    cfg:    "boardcfg.p2eval"
-    ser:    "com.serial.terminal.ansi"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
     adc:    "signal.adc.ads1115" | SCL=0, SDA=1, I2C_FREQ=400_000, I2C_ADDR=%00
 
-PUB main()
+CON
 
-    ser.start(SER_BAUD)
-    ser.clear()
-    ser.strln(string("Serial terminal started"))
-    if ( adc.start() )
-        ser.strln(string("ADS1115 driver started"))
-    else
-        ser.strln(string("ADS1115 driver failed to start - halting"))
-        repeat
+    VF  = 1_000_000
+
+PUB main() | v
+
+    setup()
 
     adc.adc_scale(4_096)                        ' 256, 512, 1024, 2048, 4096, 6144 (mV)
     adc.adc_data_rate(128)                      ' 8, 16, 32, 64, 128, 250, 475, 860 (Hz)
     adc.opmode(adc.CONT)
     adc.set_adc_channel(0)
-    show_adc_data()
 
-#include "adcdemo.common.spin2h"
+    repeat
+        v := adc.voltage()
+        ser.pos_xy(0, 3)
+        ser.printf(@"Voltage: %d.%06.6dv\n\r", (v / VF), abs(v // VF))
+
+
+PUB setup()
+
+    ser.start()
+
+    ser.clear()
+    ser.strln(@"Serial terminal started")
+
+    if ( adc.start() )
+        ser.strln(@"ADS1115 driver started")
+    else
+        ser.strln(@"ADS1115 driver failed to start - halting")
+        repeat
+
 
 DAT
 {
-Copyright (c) 2023 Jesse Burt
+Copyright (c) 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
