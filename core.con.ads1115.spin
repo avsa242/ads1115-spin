@@ -37,6 +37,7 @@ CON
         DR_BITS         = %111
         COMP_QUE_BITS   = %11
         OS_MASK         = (1 << OS) ^ CONFIG_MASK
+        MEAS_ONE        = (1 << OS)
         MUX_MASK        = (MUX_BITS << MUX) ^ CONFIG_MASK
         PGA_MASK        = (PGA_BITS << PGA) ^ CONFIG_MASK
         MODE_MASK       = (1 << MODE) ^ CONFIG_MASK
