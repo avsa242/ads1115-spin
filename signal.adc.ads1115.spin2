@@ -4,8 +4,8 @@
     Description:    Driver for the TI ADS1115 ADC
     Author:         Jesse Burt
     Started:        Apr 2, 2021
-    Updated:        Sep 13, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jun 19, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -140,8 +140,7 @@ PUB adc_scale(scale=-2): curr_scl
             scale := lookdownz(scale: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256)
             { set scaling factor }
             _uvolts_lsb := lookupz(scale: 187_5000, 125_0000, 62_5000, 31_2500, 15_6250, 7_8125)
-            scale <<= core.PGA
-            scale := ((curr_scl & core.PGA_MASK) | scale)
+            scale := ((curr_scl & core.PGA_MASK) | (scale << core.PGA) )
             writereg(core.CONFIG, scale)
         other:
             curr_scl := ((curr_scl >> core.PGA) & core.PGA_BITS)
@@ -174,10 +173,9 @@ PUB differential_mode(m=-2): curr_m
     curr_m := readreg(core.CONFIG)
     case m
         0..3:
-            m := ((curr_m & core.MUX_MASK) | (m << core.MUX) )
-            writereg(core.CONFIG, m)
+            writereg(core.CONFIG, ( (curr_m & core.MUX_MASK) | (m << core.MUX) ) )
         other:
-            return ((m >> core.MUX) & core.MUX_BITS)
+            return ( (m >> core.MUX) & core.MUX_BITS)
 
 
 PUB int_polarity(state=-2): curr_state
@@ -187,8 +185,7 @@ PUB int_polarity(state=-2): curr_state
     curr_state := readreg(core.CONFIG)
     case state
         LOW, HIGH:
-            state := ((curr_state & core.COMP_POL_MASK) | (state << core.COMP_POL) )
-            writereg(core.CONFIG, state)
+            writereg(core.CONFIG, ( (curr_state & core.COMP_POL_MASK) | (state << core.COMP_POL) ) )
         other:
             return ((curr_state >> core.COMP_POL) & 1)
 
@@ -201,8 +198,8 @@ PUB int_duration(cycles=-2): curr_cyc
     curr_cyc := readreg(core.CONFIG)
     case cycles
         1, 2, 4:
-            cycles := lookdownz(cycles: 1, 2, 4) << core.COMP_QUE
-            cycles := ((curr_cyc & core.COMP_QUE_MASK) | cycles)
+            cycles := ( (curr_cyc & core.COMP_QUE_MASK) | ...
+                        (lookdownz(cycles: 1, 2, 4) << core.COMP_QUE) )
             writereg(core.CONFIG, cycles)
         other:
             curr_cyc := ((curr_cyc >> core.COMP_QUE) & core.COMP_QUE_BITS)
@@ -219,10 +216,10 @@ PUB int_latch_ena(state=-2): curr_state
     case abs(state)
         0, 1:
             state := (abs(state) & 1) << core.COMP_LAT
-            state := ((curr_state & core.COMP_LAT_MASK) | state)
+            state := (curr_state & core.COMP_LAT_MASK) | ( (||(state) & 1) << core.COMP_LAT)
             writereg(core.CONFIG, state)
         other:
-            return (((curr_state >> core.COMP_LAT) & 1) == 1)
+            return ( ( (curr_state >> core.COMP_LAT) & 1) == 1)
 
 
 PUB int_set_hi_thresh(thresh)
@@ -268,10 +265,9 @@ PUB opmode(mode=-2): curr_mode
     curr_mode := readreg(core.CONFIG)
     case mode
         CONT, SINGLE:
-            mode := ( (curr_mode & core.MODE_MASK) | (mode << core.MODE) )
-            writereg(core.CONFIG, mode)
+            writereg(core.CONFIG, ( (curr_mode & core.MODE_MASK) | (mode << core.MODE) ) )
         other:
-            return ((curr_mode >> core.MODE) & 1)
+            return ( (curr_mode >> core.MODE) & 1)
 
 
 PUB set_adc_channel(ch)
@@ -293,46 +289,37 @@ PRI adc_chan_ena(ch=-2): curr_ch
     curr_ch := readreg(core.CONFIG)
     case ch
         0..3:
-            ch := ( (curr_ch & core.MUX_MASK) | ( (ch + %100) << core.MUX ) )
-            writereg(core.CONFIG, ch)
+            writereg(core.CONFIG, ( (curr_ch & core.MUX_MASK) | ( (ch + %100) << core.MUX ) ) )
         other:
-            return (((ch >> core.MUX) & %111) - %100)
+            return ( ( (ch >> core.MUX) & %111) - %100)
 
 
 PRI readreg(reg_nr): v | cmd_pkt
 ' Read nr_bytes from reg_nr into ptr_buff
-    case reg_nr
-        $00..$03:
-            cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
-            cmd_pkt.byte[1] := reg_nr
-            i2c.start()
-            i2c.wrblock_lsbf(@cmd_pkt, 2)
+    cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
+    cmd_pkt.byte[1] := reg_nr
+    i2c.start()
+    i2c.wrblock_lsbf(@cmd_pkt, 2)
 
-            i2c.start()
-            i2c.write(SLAVE_RD | _addr_bits)
-            i2c.rdblock_msbf(@v, 2, i2c.NAK)
-            i2c.stop()
-        other:
-            return
+    i2c.start()
+    i2c.write(SLAVE_RD | _addr_bits)
+    i2c.rdblock_msbf(@v, 2, i2c.NAK)
+    i2c.stop()
 
 
 PRI writereg(reg_nr, v) | cmd_pkt
 ' Write nr_bytes from ptr_buff to the slave device
-    case reg_nr
-        $01..$03:
-            cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
-            cmd_pkt.byte[1] := reg_nr
-            i2c.start()
-            i2c.wrblock_lsbf(@cmd_pkt, 2)
-            i2c.wrblock_msbf(@v, 2)
-            i2c.stop()
-        other:
-            return
+    cmd_pkt.byte[0] := (SLAVE_WR | _addr_bits)
+    cmd_pkt.byte[1] := reg_nr
+    i2c.start()
+    i2c.wrblock_lsbf(@cmd_pkt, 2)
+    i2c.wrblock_msbf(@v, 2)
+    i2c.stop()
 
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
