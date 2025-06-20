@@ -4,7 +4,7 @@
     Description:    Driver for the TI ADS1115 ADC
     Author:         Jesse Burt
     Started:        Feb 8, 2020
-    Updated:        Jun 19, 2025
+    Updated:        Jun 20, 2025
     Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
@@ -149,9 +149,14 @@ PUB adc_scale(scale=-2): curr_scl
             return lookupz(curr_scl: 6_144, 4_096, 2_048, 1_024, 0_512, 0_256, 0_256, 0_256)
 
 
-PUB adc2volts(adc_word): volts
+PUB adc2volts(adc_word): volts | s
 ' Scale ADC word to microvolts
-    return u64.multdiv(adc_word, _uvolts_lsb, 1_0000)
+    if ( adc_word < 0 )                         ' remember sign of word for unsigned math below
+        s := -1
+    else
+        s := 1
+
+    return u64.multdiv(abs(adc_word), _uvolts_lsb, 1_0000) * s
 
 
 CON
@@ -215,10 +220,10 @@ PUB int_latch_ena(state=-2): curr_state
 '       FALSE (0): Active interrupts clear when the measurement returns to
 '           within Low and High thresholds
     curr_state := readreg(core.CONFIG)
-    case ||(state)
+    case abs(state)
         0, 1:
-            state := (||(state) & 1) << core.COMP_LAT
-            state := (curr_state & core.COMP_LAT_MASK) | ( (||(state) & 1) << core.COMP_LAT)
+            state := (abs(state) & 1) << core.COMP_LAT
+            state := (curr_state & core.COMP_LAT_MASK) | ( (abs(state) & 1) << core.COMP_LAT)
             writereg(core.CONFIG, state)
         other:
             return ( ( (curr_state >> core.COMP_LAT) & 1) == 1)

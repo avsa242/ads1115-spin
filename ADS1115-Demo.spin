@@ -5,8 +5,8 @@
         * Voltage data output
     Author:         Jesse Burt
     Started:        Feb 8, 2020
-    Updated:        Sep 13, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        Jun 20, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -27,7 +27,8 @@ CON
 
     VF  = 1_000_000
 
-PUB main() | v
+
+PUB main() | v, sch
 
     setup()
 
@@ -39,7 +40,11 @@ PUB main() | v
     repeat
         v := adc.voltage()
         ser.pos_xy(0, 3)
-        ser.printf2(@"Voltage: %d.%06.6dv\n\r", (v / VF), abs(v // VF))
+        if ( v < 0 )                            ' choose sign character based on sign of result
+            sch := "-"
+        else
+            sch := " "
+        ser.printf(@"Voltage: %c%d.%06dv\n\r", sch, (v / VF), abs(v // VF) )
 
 
 PUB setup()
@@ -58,7 +63,7 @@ PUB setup()
 
 DAT
 {
-Copyright (c) 2024 Jesse Burt
+Copyright (c) 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
