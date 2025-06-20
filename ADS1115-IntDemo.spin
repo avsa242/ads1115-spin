@@ -16,7 +16,7 @@ CON
     _xinfreq    = 5_000_000
 
 ' -- User-definable constants
-    LED         = cfg.LED1
+    LED         = 26
     INT1        = 24
 ' --
 
@@ -25,7 +25,6 @@ CON
 
 OBJ
 
-    cfg:    "boardcfg.flip"
     time:   "time"
     ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
     adc:    "signal.adc.ads1115" | SCL=28, SDA=29, I2C_FREQ=100_000, I2C_ADDR=%00
@@ -37,7 +36,7 @@ VAR
     long _intflag
 
 
-PUB main() | uV
+PUB main() | uV, sch
 
     setup()
 
@@ -66,7 +65,11 @@ PUB main() | uV
         uV := adc.voltage()
         ser.pos_xy(0, 3)
         ser.str(@"ADC: ")
-        ser.printf2(@"Voltage: %d.%06.6dv\n\r", (adc.voltage() / VF), ||(adc.voltage() // VF))
+        if ( uV < 0 )                            ' choose sign character based on sign of result
+            sch := "-"
+        else
+            sch := " "
+        ser.printf(@"Voltage: %c%d.%06dv\n\r", sch, (uV / VF), abs(uV // VF) )
         ser.clear_line()
 
         if ( _intflag )
